@@ -123,16 +123,16 @@ type
     destructor Destroy; override;
 
     { Action: Pause a running service. }
-    procedure ServicePause(const AWait: Boolean);
+    procedure Pause(const AWait: Boolean = True);
     { Action: Continue a paused service. }
-    procedure ServiceContinue(const AWait: Boolean);
+    procedure Continue(const AWait: Boolean = True);
     { Action: Stop a running service. }
-    procedure ServiceStop(const AWait: Boolean);
+    procedure Stop(const AWait: Boolean = True);
     { Action: Start a not running service.
       You can use the @link(State) property to change the state from ssStopped to ssRunning }
-    procedure ServiceStart(const AWait: Boolean);
+    procedure Start(const AWait: Boolean = True);
     { Name of this service. }
-    property ServiceName: string read FServiceName;
+    property Name: string read FServiceName;
     { Display name of this service }
     property DisplayName: string read FDisplayName;
     { Number of dependant services of this service }
@@ -218,6 +218,8 @@ type
     function GetServicesByDisplayName: TArray<TServiceInfo>;
   end;
 
+  function ServiceStateToString(const AServiceState: TServiceState): string;
+
 implementation
 uses
   System.Generics.Collections, System.Generics.Defaults;
@@ -225,6 +227,19 @@ uses
 procedure RaiseIndexOutOfBounds;
 begin
   raise EIndexOutOfBounds.Create('Index out of bounds');
+end;
+
+function ServiceStateToString(const AServiceState: TServiceState): string;
+begin
+  case AServiceState of
+    ssStopped: Result := 'Stopped';
+    ssStartPending: Result := 'Start pending...';
+    ssStopPending: Result := 'Stop pending...';
+    ssRunning: Result := 'Running';
+    ssContinuePending: Result := 'Continue pending...';
+    ssPausePending: Result := 'Pause pending...';
+    ssPaused: Result := 'Paused';
+  end;
 end;
 
 { TServiceManager }
@@ -342,7 +357,7 @@ begin
   begin
     Result := FServices[LIndex];
 
-    if SameText(Result.ServiceName, AName) then
+    if SameText(Result.Name, AName) then
       Exit;
   end;
 
@@ -585,7 +600,7 @@ begin
   FServiceStatus := LStatus;
 end;
 
-procedure TServiceInfo.ServiceContinue(const AWait: Boolean);
+procedure TServiceInfo.Continue(const AWait: Boolean = True);
 
   procedure RaiseServiceCannotBeContinued;
   begin
@@ -610,7 +625,7 @@ begin
   end;
 end;
 
-procedure TServiceInfo.ServicePause(const AWait: Boolean);
+procedure TServiceInfo.Pause(const AWait: Boolean = True);
 
   procedure RaiseServiceCannotBePaused;
   begin
@@ -635,7 +650,7 @@ begin
   end;
 end;
 
-procedure TServiceInfo.ServiceStart(const AWait: Boolean);
+procedure TServiceInfo.Start(const AWait: Boolean = True);
 var
   LServiceArgumentVectors: PCHar;
 begin
@@ -652,7 +667,7 @@ begin
   end;
 end;
 
-procedure TServiceInfo.ServiceStop(const AWait: Boolean);
+procedure TServiceInfo.Stop(const AWait: Boolean = True);
 
   procedure RaiseServiceCannotBeStopped;
   begin
@@ -885,25 +900,25 @@ begin
   case AServiceState of
     ssStopped:
       if LOldState <> ssStopped then
-        ServiceStop(True);
+        Stop(True);
     ssRunning:
       case LOldState of
-        ssStopped: ServiceStart(True);
-        ssPaused:  ServiceContinue(True);
+        ssStopped: Start(True);
+        ssPaused:  Continue(True);
       end;
     ssPaused:
       case LOldState of
         ssStopped:
           begin
-            ServiceStart(True);
+            Start(True);
             try
-              ServicePause(True); // some services do not support pause/continue!
+              Pause(True); // some services do not support pause/continue!
             except
-              ServiceStop(True);
+              Stop(True);
               raise;
             end;
           end;
-        ssRunning: ServicePause(True);
+        ssRunning: Pause(True);
       end;
     else
       raise Exception.Create('Cannot set a transitional state in TServiceInfo.');
