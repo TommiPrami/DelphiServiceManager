@@ -190,6 +190,8 @@ type
     constructor Create;
     destructor Destroy; override;
 
+    procedure BeginLockingProcess(const AActivateServiceManager: Boolean = True);
+    procedure EndLockingProcess;
     { Requeries the states, names etc of all services on the given @link(MachineName).
       Works only while active. }
     procedure RebuildServicesList;
@@ -300,6 +302,14 @@ begin
   end;
 end;
 
+procedure TServiceManager.BeginLockingProcess(const AActivateServiceManager: Boolean = True);
+begin
+  AllowLocking := True;
+
+  if not Active and AActivateServiceManager then
+    Active := True;
+end;
+
 procedure TServiceManager.CheckArrayBounds(const AIndex: Integer);
 begin
   if (AIndex < 0) or (AIndex >= Length(FServices)) then
@@ -328,6 +338,14 @@ begin
   Active := False;
 
   inherited Destroy;
+end;
+
+procedure TServiceManager.EndLockingProcess;
+begin
+  if Active then
+    Active := False;
+
+  AllowLocking := False;
 end;
 
 function TServiceManager.GetActive: Boolean;

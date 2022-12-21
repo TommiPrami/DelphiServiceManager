@@ -82,39 +82,46 @@ end;
 
 procedure TFormFirebierdServiceMain.ButtonFixFirebirdServiceClick(Sender: TObject);
 var
+  LServciceManager: TServiceManager;
   LFirebirdService: TServiceInfo;
 begin
+  LServciceManager := TServiceManager.Create;
   try
-    Log('Fixing Firebird service...');
+    try
+      Log('Fixing Firebird service...');
 
-    FServciceManager.Active := False;
-    FServciceManager.AllowLocking := True;
-    ActivateOrRefreshServiceManager;
+      LServciceManager.BeginLockingProcess;
+      try
+          LFirebirdService := LServciceManager.ServiceByName[FIREBIRD_DEFAULT_SERVICE_NAME];
 
-    LFirebirdService := FServciceManager.ServiceByName[FIREBIRD_DEFAULT_SERVICE_NAME];
+          if LFirebirdService.State = ssRunning then
+          begin
+            Log('Stopping service...', 1);
+            LFirebirdService.Stop;
+          end;
 
-    if LFirebirdService.State = ssRunning then
-    begin
-      Log('Stopping service...', 1);
-      LFirebirdService.Stop;
+          if LFirebirdService.StartType <> ssAutomatic then
+          begin
+            Log('Changing Service Start Type to: Automatic', 1);
+            LFirebirdService.StartType := ssAutomatic;
+          end;
+
+          if LFirebirdService.State <> ssRunning then
+          begin
+            Log('Starting service...', 1);
+            LFirebirdService.Start;
+          end;
+
+          Log('Service state: ' + ServiceStateToString(LFirebirdService.State), 1);
+        except
+          on E: Exception do
+            Log(E);
+        end;
+    finally
+      LServciceManager.EndLockingProcess;
     end;
-
-    if LFirebirdService.StartType <> ssAutomatic then
-    begin
-      Log('Changing Service Start Type to: Automatic', 1);
-      LFirebirdService.StartType := ssAutomatic;
-    end;
-
-    if LFirebirdService.State <> ssRunning then
-    begin
-      Log('Starting service...', 1);
-      LFirebirdService.Start;
-    end;
-
-    Log('Service state: ' + ServiceStateToString(LFirebirdService.State), 1);
-  except
-    on E: Exception do
-      Log(E);
+  finally
+    LServciceManager.Free;
   end;
 end;
 
