@@ -9,14 +9,13 @@ uses
 
 type
   TFormFirebierdServiceMain = class(TForm)
-    IdTCPClient: TIdTCPClient;
-    ButtonQueryFirebird: TButton;
-    MemoLog: TMemo;
-    PanelRight: TPanel;
     ButtonEnumerateServices: TButton;
+    ButtonFixFirebirdService: TButton;
+    ButtonQueryFirebird: TButton;
     ButtonStartFirebirdService: TButton;
     ButtonStopFirebirdService: TButton;
-    ButtonFixFirebirdService: TButton;
+    MemoLog: TMemo;
+    PanelRight: TPanel;
     procedure ButtonEnumerateServicesClick(Sender: TObject);
     procedure ButtonFixFirebirdServiceClick(Sender: TObject);
     procedure ButtonQueryFirebirdClick(Sender: TObject);
@@ -24,13 +23,13 @@ type
     procedure ButtonStopFirebirdServiceClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-  private
+  strict private
     FServciceManager: TServiceManager;
-
     procedure ActivateOrRefreshServiceManager;
-    procedure Log(const AMessage: string; const AIndent: Integer = 0); overload;
     procedure Log(const AException: Exception; const AIndent: Integer = 0); overload;
-
+    procedure Log(const AMessage: string; const AIndent: Integer = 0); overload;
+    function GetLogIndent(const AIndent: Integer): string;
+    function RemoveLineBreaks(const AMessage: string): string;
   public
     { Public declarations }
   end;
@@ -61,6 +60,8 @@ var
   LServices: TArray<TServiceInfo>;
   LService: TServiceInfo;
 begin
+  Log('Enumerate services...');
+
   try
     ActivateOrRefreshServiceManager;
 
@@ -68,7 +69,6 @@ begin
 
     MemoLog.Lines.BeginUpdate;
     try
-      Log('Enumerate services');
       for LService in LServices do
         Log(LService.DisplayName, 1);
     finally
@@ -76,8 +76,10 @@ begin
     end;
   except
     on E: Exception do
-      Log(E);
+      Log(E, 2);
   end;
+
+  Log('');
 end;
 
 procedure TFormFirebierdServiceMain.ButtonFixFirebirdServiceClick(Sender: TObject);
@@ -85,69 +87,55 @@ var
   LServciceManager: TServiceManager;
   LFirebirdService: TServiceInfo;
 begin
+  Log('Fixing Firebird service...');
+
   LServciceManager := TServiceManager.Create;
   try
     try
-      Log('Fixing Firebird service...');
 
       LServciceManager.BeginLockingProcess;
       try
-          LFirebirdService := LServciceManager.ServiceByName[FIREBIRD_DEFAULT_SERVICE_NAME];
+        LFirebirdService := LServciceManager.ServiceByName[FIREBIRD_DEFAULT_SERVICE_NAME];
 
-          if LFirebirdService.State = ssRunning then
-          begin
-            Log('Stopping service...', 1);
-            LFirebirdService.Stop;
-          end;
-
-          if LFirebirdService.StartType <> ssAutomatic then
-          begin
-            Log('Changing Service Start Type to: Automatic', 1);
-            LFirebirdService.StartType := ssAutomatic;
-          end;
-
-          if LFirebirdService.State <> ssRunning then
-          begin
-            Log('Starting service...', 1);
-            LFirebirdService.Start;
-          end;
-
-          Log('Service state: ' + ServiceStateToString(LFirebirdService.State), 1);
-        except
-          on E: Exception do
-            Log(E);
+        if LFirebirdService.State = ssRunning then
+        begin
+          Log('Stopping service...', 1);
+          LFirebirdService.Stop;
         end;
+
+        if LFirebirdService.StartType <> ssAutomatic then
+        begin
+          Log('Changing Service Start Type to: Automatic', 1);
+          LFirebirdService.StartType := ssAutomatic;
+        end;
+
+        if LFirebirdService.State <> ssRunning then
+        begin
+          Log('Starting service...', 1);
+          LFirebirdService.Start;
+        end;
+
+        Log('Service state: ' + ServiceStateToString(LFirebirdService.State), 1);
+      except
+        on E: Exception do
+          Log(E, 2);
+      end;
     finally
       LServciceManager.EndLockingProcess;
     end;
   finally
     LServciceManager.Free;
   end;
+
+  Log('');
 end;
 
 procedure TFormFirebierdServiceMain.ButtonQueryFirebirdClick(Sender: TObject);
 var
-  LConnectionOK: Boolean;
   LServiceRunning: Boolean;
   LFirebirdService: TServiceInfo;
 begin
-  Log('Checking Firebird server info...');
-  try
-    try
-      IdTCPClient.Connect;
-      LConnectionOK := True;
-    finally
-      IdTCPClient.Disconnect;
-    end;
-  except
-    on E: Exception do
-    begin
-      LConnectionOK := False;
-      Log(Format('Exception %s occured while pinging firebird server with TCP/IP protocol: "%s"', [E.ClassName, E.Message]));
-    end;
-  end;
-
-  Log(IfThen(LConnectionOK, 'Ping with TCP/IP succeeded to port 3050...', 'Server NOT responding to TCP/IP call'), 1);
+  Log('Query Firebird service status...');
 
   try
     ActivateOrRefreshServiceManager;
@@ -161,7 +149,7 @@ begin
       Log('Service located at: "' + LFirebirdService.BinaryPathName + '"', 1);
   except
     on E: Exception do
-      Log(E);
+      Log(E, 2);
   end;
 
   Log('');
@@ -171,10 +159,10 @@ procedure TFormFirebierdServiceMain.ButtonStartFirebirdServiceClick(Sender: TObj
 var
   LFirebirdService: TServiceInfo;
 begin
-  try
-    Log('Starting Firebird service...');
+  Log('Starting Firebird service...');
 
-    ActivateOrRefreshServiceManager;
+  try
+   ActivateOrRefreshServiceManager;
 
     LFirebirdService := FServciceManager.ServiceByName[FIREBIRD_DEFAULT_SERVICE_NAME];
 
@@ -189,17 +177,19 @@ begin
       Log('Firebird service already running', 1);
   except
     on E: Exception do
-      Log(E);
+      Log(E, 2);
   end;
+
+  Log('');
 end;
 
 procedure TFormFirebierdServiceMain.ButtonStopFirebirdServiceClick(Sender: TObject);
 var
   LFirebirdService: TServiceInfo;
 begin
-  try
-    Log('Stopping Firebird service...');
+  Log('Stopping Firebird service...');
 
+  try
     ActivateOrRefreshServiceManager;
 
     LFirebirdService := FServciceManager.ServiceByName[FIREBIRD_DEFAULT_SERVICE_NAME];
@@ -215,8 +205,10 @@ begin
       Log('Firebird service already stopped', 1);
   except
     on E: Exception do
-      Log(E);
+      Log(E, 2);
   end;
+
+  Log('');
 end;
 
 procedure TFormFirebierdServiceMain.FormCreate(Sender: TObject);
@@ -229,7 +221,7 @@ begin
   FServciceManager.Free;
 end;
 
-function GetLogIndent(const AIndent: Integer): string;
+function TFormFirebierdServiceMain.GetLogIndent(const AIndent: Integer): string;
 begin
   if AIndent > 0 then
     Result := StringOfChar(' ', AIndent * 2) + '- '
@@ -243,16 +235,21 @@ var
 begin
   LIndent := GetLogIndent(AIndent);
 
-  MemoLog.Lines.Add(LIndent + AMessage);
+  MemoLog.Lines.Add(LIndent + RemoveLineBreaks(AMessage));
 end;
 
-procedure TFormFirebierdServiceMain.Log(const AException: Exception; const AIndent: Integer = 0);
-var
-  LIndent: string;
-begin
-  LIndent := GetLogIndent(AIndent);
 
-  MemoLog.Lines.Add(LIndent + 'Exception ' + AException.ClassName + ' occurent, with message: "' + AException.Message + '"');
+procedure TFormFirebierdServiceMain.Log(const AException: Exception; const AIndent: Integer = 0);
+begin
+  Log('Exception ' + AException.ClassName + ' occurent, with message: "' + AException.Message + '"', AIndent);
+end;
+
+function TFormFirebierdServiceMain.RemoveLineBreaks(const AMessage: string): string;
+begin
+  // Just quick and dirty way to get error message into one log line
+  Result := AMessage.Replace(#13, ' ', [rfReplaceAll]);
+  Result := Result.Replace(#10, '', [rfReplaceAll]);
+  Result := Result.Replace('  ', ' ', [rfReplaceAll]); // Duplicate spaces to one
 end;
 
 end.

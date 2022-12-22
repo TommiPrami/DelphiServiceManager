@@ -21,7 +21,7 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
     Align = alClient
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -16
+    Font.Height = -15
     Font.Name = 'Courier New'
     Font.Style = []
     ParentFont = False
@@ -92,13 +92,5 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
       TabOrder = 4
       OnClick = ButtonFixFirebirdServiceClick
     end
-  end
-  object IdTCPClient: TIdTCPClient
-    ConnectTimeout = 0
-    Host = 'localhost'
-    Port = 3050
-    ReadTimeout = -1
-    Left = 580
-    Top = 135
   end
 end
