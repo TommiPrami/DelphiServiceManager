@@ -24,7 +24,7 @@ type
   ECustomServiceManagerException = class(Exception);
   EIndexOutOfBounds = class(ECustomServiceManagerException);
   EServiceNotFound = class(ECustomServiceManagerException);
-  EOSNotSupoerted = class(ECustomServiceManagerException);
+  EOSNotSupported = class(ECustomServiceManagerException);
   EOperationNotAllowedWhileActive = class(ECustomServiceManagerException);
   ELockingNotAllowed = class(ECustomServiceManagerException);
   EServiceStateUnkown = class(ECustomServiceManagerException);
@@ -33,7 +33,35 @@ type
   EServiceCannotBeStopped = class(ECustomServiceManagerException);
   EServiceDidNotRespond = class(ECustomServiceManagerException);
   EServiceServiceStartTypeUnknown = class(ECustomServiceManagerException);
+  ECannotSetTransitionalState = class(ECustomServiceManagerException);
 
+  TErrorInfo = record
+    ErrorCode: Integer;
+    ExceptionClass: ExceptClass;
+    ErrorMessage: string;
+    // TODO: System error code. maybe...
+  end;
+
+const
+  ErrorInfoArray: array[0..12] of TErrorInfo =
+    (
+      (ErrorCode: 1; ExceptionClass: Exception; ErrorMessage: 'BuildServicesList only works when Active.'),
+      (ErrorCode: 2; ExceptionClass: EServiceNotFound; ErrorMessage: 'Service not found.'),
+      (ErrorCode: 3; ExceptionClass: EOSNotSupported; ErrorMessage: 'This program only works on Windows NT, 2000, XP or later.'),
+      (ErrorCode: 4; ExceptionClass: EOperationNotAllowedWhileActive; ErrorMessage: 'Cannot change machine name while Active.'),
+      (ErrorCode: 5; ExceptionClass: ELockingNotAllowed; ErrorMessage: 'Locking of the service manager not allowed.'),
+      (ErrorCode: 6; ExceptionClass: EOperationNotAllowedWhileActive; ErrorMessage: 'Cannot change allow locking while active.'),
+      (ErrorCode: 7; ExceptionClass: EServiceStateUnkown; ErrorMessage: 'Service State unknown.'),
+      (ErrorCode: 8; ExceptionClass: EServiceCannotBeContinued; ErrorMessage: 'Service cannot be continued.'),
+      (ErrorCode: 9; ExceptionClass: EServiceCannotBeContinued; ErrorMessage: 'Service cannot be paused.'),
+      (ErrorCode: 10; ExceptionClass: EServiceCannotBeStopped; ErrorMessage: 'Service cannot be Stopped.'),
+      (ErrorCode: 11; ExceptionClass: EServiceDidNotRespond; ErrorMessage: 'Service did not react within timeframe given.'),
+      (ErrorCode: 12; ExceptionClass: EServiceServiceStartTypeUnknown; ErrorMessage: 'Service Start Type unknown.'),
+      (ErrorCode: 13; ExceptionClass: ECannotSetTransitionalState; ErrorMessage: 'Cannot set a transitional state.')
+
+   );
+
+type
   // Forward declaration of Service manager class
   TServiceManager = class;
 
@@ -99,7 +127,7 @@ type
     function GetInteractive: Boolean;
     function GetStartType: TServiceStartup;
     function GetBinaryPathname: string;
-    procedure WaitForPendingServiceState(const AServiceState: TServiceState);
+    function WaitForPendingServiceState(const AServiceState: TServiceState): Boolean;
     procedure SetState(const AServiceState: TServiceState);
     function GetServiceAccepts: TServiceAccepts;
     procedure SetStartType(const AValue: TServiceStartup);
@@ -108,13 +136,13 @@ type
     procedure CleanupHandle;
     { Open a handle to the service with the given access rights.
       This handle can be deleted via @link(CleanupHandle). }
-    procedure GetHandle(const AAccess: DWORD);
+    function GetHandle(const AAccess: DWORD): Boolean;
     { Query all dependent services (list them via the @link(TServiceManager). }
     procedure SearchDependents;
     { Query the current status of this service }
-    procedure Query;
+    function Query: Boolean;
     { Wait for a given status of this service... }
-    procedure WaitFor(const AState: DWORD);
+    function WaitFor(const AState: DWORD): Boolean;
     { Fetch the configuration information }
     procedure QueryConfig;
   public
@@ -122,14 +150,14 @@ type
     destructor Destroy; override;
 
     { Action: Pause a running service. }
-    procedure Pause(const AWait: Boolean = True);
+    function Pause(const AWait: Boolean = True): Boolean;
     { Action: Continue a paused service. }
-    procedure Continue(const AWait: Boolean = True);
+    function Continue(const AWait: Boolean = True): Boolean;
     { Action: Stop a running service. }
-    procedure Stop(const AWait: Boolean = True);
+    function Stop(const AWait: Boolean = True): Boolean;
     { Action: Start a not running service.
       You can use the @link(State) property to change the state from ssStopped to ssRunning }
-    procedure Start(const AWait: Boolean = True);
+    function Start(const AWait: Boolean = True): Boolean;
     { Name of this service. }
     property Name: string read FServiceName;
     { Display name of this service }
@@ -169,6 +197,9 @@ type
     FMachineName: string;
     FServices: TArray<TServiceInfo>;
     FAllowLocking: Boolean;
+    FLastErrorCode: Integer;
+    FLastErrorMessage: string;
+    FRaiseExceptions: Boolean;
     function GetActive: Boolean;
     procedure SetActive(const ASetToActive: Boolean);
     procedure SetMachineName(const AMachineName: string);
@@ -182,18 +213,22 @@ type
     { Internal function that frees up all the @link(TServiceInfo) classes. }
     procedure CleanupServices;
     { Internal function for locking the manager }
-    procedure Lock;
+    function Lock: Boolean;
     { Internal function for unlocking the manager }
-    procedure Unlock;
+    function Unlock: Boolean;
+    procedure ResetLastError;
+    procedure HandleError(const AErrorCode: Integer; const AForceException: Boolean = False);
   public
     constructor Create;
     destructor Destroy; override;
 
     procedure BeginLockingProcess(const AActivateServiceManager: Boolean = True);
     procedure EndLockingProcess;
+    function Open: Boolean;
+    function Close: Boolean;
     { Requeries the states, names etc of all services on the given @link(MachineName).
       Works only while active. }
-    procedure RebuildServicesList;
+    function RebuildServicesList: Boolean;
     { Delete a service... }
     // procedure DeleteService(Index: Integer);
     { Get the number of services. This number is refreshed when the @link(Active) is
@@ -214,6 +249,9 @@ type
     { Allow locking... Is needed only when changing several properties in TServiceInfo.
       Property can only be set while inactive. }
     property AllowLocking: Boolean read FAllowLocking write SetAllowLocking;
+    property RaiseExceptions: Boolean read FRaiseExceptions write FRaiseExceptions;
+    property LastErrorCode: Integer read FLastErrorCode;
+    property LastErrorMessage: string read FLastErrorMessage;
 
     procedure SortByDisplayName;
     function GetServicesByDisplayName: TArray<TServiceInfo>;
@@ -245,7 +283,7 @@ end;
 
 { TServiceManager }
 
-procedure TServiceManager.RebuildServicesList;
+function TServiceManager.RebuildServicesList: Boolean;
 var
   LServices: PEnumServiceStatus;
   LServicesLoopPointer: PEnumServiceStatus;
@@ -254,10 +292,16 @@ var
   LResumeHandle: DWORD;
   LIndex: Integer;
 begin
-  if not Active then raise
-    Exception.Create('BuildServicesList only works when active');
+  Result := False;
+
+  if not Active then
+  begin
+    HandleError(1);
+    Exit;
+  end;
 
   // Cleanup
+  ResetLastError;
   CleanupServices;
 
   // Get the amount of memory we need...
@@ -299,6 +343,14 @@ begin
   finally
     FreeMem(LServices);
   end;
+
+  Result := True;
+end;
+
+procedure TServiceManager.ResetLastError;
+begin
+  FLastErrorCode := 0;
+  FLastErrorMEssage := '';
 end;
 
 procedure TServiceManager.BeginLockingProcess(const AActivateServiceManager: Boolean = True);
@@ -325,10 +377,33 @@ begin
   SetLength(FServices, 0);
 end;
 
+function TServiceManager.Close: Boolean;
+begin
+  if not Active then
+    Exit(True);
+
+  Result := False;
+
+  // CleanupServices
+  ResetLastError;
+  CleanupServices;
+  // Close service manager
+  if Assigned(FLockHandle) then
+    if not Unlock then
+      Exit;
+
+  CloseServiceHandle(FManagerHandle);
+  FManagerHandle := 0;
+
+  Result := FManagerHandle = 0;
+end;
+
 constructor TServiceManager.Create;
 begin
   inherited Create;
 
+  ResetLastError;
+  FRaiseExceptions := True;
   FManagerHandle := 0;
 end;
 
@@ -369,16 +444,23 @@ end;
 function TServiceManager.GetServiceByName(const AName: string): TServiceInfo;
 var
   LIndex: Integer;
+  LCurrentService: TServiceInfo;
 begin
+  Result := nil;
+
   for LIndex := 0 to High(FServices) do
   begin
-    Result := FServices[LIndex];
+    LCurrentService := FServices[LIndex];
 
-    if SameText(Result.Name, AName) then
-      Exit;
+    if SameText(LCurrentService.Name, AName) then
+    begin
+      Result := LCurrentService;
+      Break;
+    end;
   end;
 
-  raise EServiceNotFound.Create('Service not found');
+  if not Assigned(Result) then
+    HandleError(2);
 end;
 
 function TServiceManager.GetServiceCount: Integer;
@@ -398,56 +480,34 @@ begin
   );
 end;
 
-procedure TServiceManager.SetActive(const ASetToActive: Boolean);
+procedure TServiceManager.HandleError(const AErrorCode: Integer; const AForceException: Boolean = False);
 var
-  LVersionInfo: TOSVersionInfo;
-  LDesiredAccess: DWORD;
+  LErrorInfo: TErrorInfo;
+begin
+  LErrorInfo := ErrorInfoArray[AErrorCode - 1];
+
+  FLastErrorCode := LErrorInfo.ErrorCode;
+  FLastErrorMessage := LErrorInfo.ErrorMessage;
+
+  if FRaiseExceptions or AForceException then
+    raise LErrorInfo.ExceptionClass.Create(FLastErrorMessage);
+end;
+
+procedure TServiceManager.SetActive(const ASetToActive: Boolean);
 begin
   if ASetToActive then
-  begin
-    if Active then
-      Exit;
-
-    // Check that we are NT, 2000, XP or above...
-    LVersionInfo.dwOSVersionInfoSize := sizeof(LVersionInfo);
-
-    if not GetVersionEx(LVersionInfo) then
-      RaiseLastOSError;
-
-    if LVersionInfo.dwPlatformId <> VER_PLATFORM_WIN32_NT then
-      raise EOSNotSupoerted.Create('This program only works on Windows NT, 2000 or XP');
-
-    // Open service manager
-    LDesiredAccess := SC_MANAGER_CONNECT or SC_MANAGER_ENUMERATE_SERVICE;
-    if FAllowLocking then
-      Inc(LDesiredAccess, SC_MANAGER_LOCK);
-
-    FManagerHandle := OpenSCManager(PChar(FMachineName), nil, LDesiredAccess);
-    if not Active then
-      RaiseLastOSError;
-
-    // Fetch the srvices list
-    RebuildServicesList;
-  end
+    Open
   else
-  begin
-    if not Active then
-      Exit;
-    // CleanupServices
-    CleanupServices;
-    // Close service manager
-    if Assigned(FLockHandle) then
-      Unlock;
-
-    CloseServiceHandle(FManagerHandle);
-    FManagerHandle := 0;
-  end;
+    Close;
 end;
 
 procedure TServiceManager.SetMachineName(const AMachineName: string);
 begin
   if Active then
-    raise EOperationNotAllowedWhileActive.Create('Cannot change machine name while active');
+  begin
+    HandleError(4, True);
+    Exit;
+  end;
 
   FMachineName := AMachineName;
 end;
@@ -460,40 +520,87 @@ begin
 end;
 *)
 
-procedure TServiceManager.Lock;
-
-  procedure CheckRaiseLockingNotAllowed;
+function TServiceManager.Lock: Boolean;
+begin
+  if not FAllowLocking then
   begin
-    if not FAllowLocking then
-      raise ELockingNotAllowed.Create('Locking of the service manager not allowed!');
+    HandleError(5);
+    Exit(False);
   end;
 
-begin
-  CheckRaiseLockingNotAllowed;
+  Result := False;
+  ResetLastError;
 
   FLockHandle := LockServiceDatabase(FManagerHandle);
 
   if FLockHandle = nil then
-    RaiseLastOSError;
+    RaiseLastOSError
+  else
+    Result := True;
 end;
 
-procedure TServiceManager.Unlock;
+function TServiceManager.Open: Boolean;
+var
+  LVersionInfo: TOSVersionInfo;
+  LDesiredAccess: DWORD;
+begin
+  if Active then
+    Exit(True);
+
+  Result := False;
+
+  ResetLastError;
+  // Check that we are NT, 2000, XP or above...
+  LVersionInfo.dwOSVersionInfoSize := sizeof(LVersionInfo);
+
+  if not GetVersionEx(LVersionInfo) then
+    RaiseLastOSError;
+
+  if LVersionInfo.dwPlatformId <> VER_PLATFORM_WIN32_NT then
+  begin
+    HandleError(3);
+    Exit;
+  end;
+
+  // Open service manager
+  LDesiredAccess := SC_MANAGER_CONNECT or SC_MANAGER_ENUMERATE_SERVICE;
+  if FAllowLocking then
+    Inc(LDesiredAccess, SC_MANAGER_LOCK);
+
+  FManagerHandle := OpenSCManager(PChar(FMachineName), nil, LDesiredAccess);
+  if not Active then
+    RaiseLastOSError;
+
+  // Fetch the srvices list
+  Result := RebuildServicesList;
+end;
+
+function TServiceManager.Unlock: Boolean;
 begin
   // We are unlocked already
   if FLockHandle = nil then
-    Exit;
+    Exit(True);
 
+  Result := False;
+  ResetLastError;
   // Unlock...
   if not UnlockServiceDatabase(FLockHandle) then
+  begin
     RaiseLastOSError;
+    Exit;
+  end;
 
   FLockHandle := nil;
+  Result := FLockHandle = nil;
 end;
 
 procedure TServiceManager.SetAllowLocking(const AValue: Boolean);
 begin
   if Active then
-    raise EOperationNotAllowedWhileActive.Create('Cannot change allow locking while active');
+  begin
+    HandleError(6, True);
+    Exit;
+  end;
 
   FAllowLocking := AValue;
 end;
@@ -557,24 +664,24 @@ begin
   Result := Length(FDependents);
 end;
 
-procedure TServiceInfo.GetHandle(const AAccess: DWORD);
+function TServiceInfo.GetHandle(const AAccess: DWORD): Boolean;
 begin
   if FServiceHandle <> 0 then
-    Exit;
+    Exit(True);
+
+  Result := False;
+
+  FServiceManager.ResetLastError;
 
   FServiceHandle := OpenService(FServiceManager.GetManagerHandle, PChar(FServiceName), AAccess);
 
   if FServiceHandle = 0 then
-    RaiseLastOSError;
+    RaiseLastOSError
+  else
+    Result := True;
 end;
 
 function TServiceInfo.GetState: TServiceState;
-
-  procedure RaiseServiceStateUnkown;
-  begin
-    raise EServiceStateUnkown.Create('Service State unknown');
-  end;
-
 begin
   if FLive then
     Query;
@@ -589,16 +696,19 @@ begin
     SERVICE_PAUSED:           Result := ssPaused;
     else
     begin
-      RaiseServiceStateUnkown;
+      FServiceManager.HandleError(7, True);
       Result := ssStopped; // Make compiler happy
     end;
   end;
 end;
 
-procedure TServiceInfo.Query;
+function TServiceInfo.Query: Boolean;
 var
   LStatus: TServiceStatus;
 begin
+  Result := False;
+  FServiceManager.ResetLastError;
+
   if FServiceHandle <> 0 then
   begin
     if not QueryServiceStatus(FServiceHandle, LStatus) then
@@ -606,7 +716,9 @@ begin
   end
   else
   begin
-    GetHandle(SERVICE_QUERY_STATUS);
+    if not GetHandle(SERVICE_QUERY_STATUS) then
+      Exit;
+
     try
       if not QueryServiceStatus(FServiceHandle, LStatus) then
         RaiseLastOSError;
@@ -616,141 +728,154 @@ begin
   end;
 
   FServiceStatus := LStatus;
+  Result := True;
 end;
 
-procedure TServiceInfo.Continue(const AWait: Boolean = True);
-
-  procedure RaiseServiceCannotBeContinued;
-  begin
-    raise EServiceCannotBeContinued.Create('Service cannot be continued');
-  end;
-
+function TServiceInfo.Continue(const AWait: Boolean = True): Boolean;
 var
   LStatus: TServiceStatus;
 begin
-  GetHandle(SERVICE_QUERY_STATUS or SERVICE_PAUSE_CONTINUE);
+  Result := False;
+
+  if GetHandle(SERVICE_QUERY_STATUS or SERVICE_PAUSE_CONTINUE) then
   try
     if not (saPauseContinue in ServiceAccepts) then
-      RaiseServiceCannotBeContinued;
+    begin
+      FServiceManager.HandleError(8);
+      Exit;
+    end;
 
     if not ControlService(FServiceHandle, SERVICE_CONTROL_CONTINUE, LStatus) then
       RaiseLastOSError;
 
     if AWait then
-      WaitFor(SERVICE_RUNNING);
+      if not WaitFor(SERVICE_RUNNING) then
+        Exit;
+
+    Result := True;
   finally
     CleanupHandle;
   end;
 end;
 
-procedure TServiceInfo.Pause(const AWait: Boolean = True);
-
-  procedure RaiseServiceCannotBePaused;
-  begin
-    raise EServiceCannotBePaused.Create('Service cannot be paused');
-  end;
-
+function TServiceInfo.Pause(const AWait: Boolean = True): Boolean;
 var
   LStatus: TServiceStatus;
 begin
-  GetHandle(SERVICE_QUERY_STATUS or SERVICE_PAUSE_CONTINUE);
+  Result := False;
+
+  if GetHandle(SERVICE_QUERY_STATUS or SERVICE_PAUSE_CONTINUE) then
   try
     if not (saPauseContinue in ServiceAccepts) then
-      RaiseServiceCannotBePaused;
+    begin
+      FServiceManager.HandleError(9);
+      Exit;
+    end;
 
     if not ControlService(FServiceHandle,SERVICE_CONTROL_PAUSE, LStatus) then
       RaiseLastOSError;
 
     if AWait then
-      WaitFor(SERVICE_PAUSED);
+      if not WaitFor(SERVICE_PAUSED) then
+        Exit;
+
+    Result := True;
   finally
     CleanupHandle;
   end;
 end;
 
-procedure TServiceInfo.Start(const AWait: Boolean = True);
+function TServiceInfo.Start(const AWait: Boolean = True): Boolean;
 var
   LServiceArgumentVectors: PCHar;
 begin
-  GetHandle(SERVICE_QUERY_STATUS or SERVICE_START);
+  Result := False;
+
+  if GetHandle(SERVICE_QUERY_STATUS or SERVICE_START) then
   try
     LServiceArgumentVectors := nil;
     if not StartService(FServiceHandle, 0, LServiceArgumentVectors) then
       RaiseLastOSError;
 
     if AWait then
-      WaitFor(SERVICE_RUNNING);
+      if not WaitFor(SERVICE_RUNNING) then
+        Exit;
+
+    Result := True;
   finally
     CleanupHandle;
   end;
 end;
 
-procedure TServiceInfo.Stop(const AWait: Boolean = True);
-
-  procedure RaiseServiceCannotBeStopped;
-  begin
-    raise EServiceCannotBeStopped.Create('Service cannot be Stopped');
-  end;
-
+function TServiceInfo.Stop(const AWait: Boolean = True): Boolean;
 var
   LStatus: TServiceStatus;
 begin
-  GetHandle(SERVICE_QUERY_STATUS or SERVICE_STOP);
+  Result := False;
+
+  if GetHandle(SERVICE_QUERY_STATUS or SERVICE_STOP) then
   try
     if not (saStop in ServiceAccepts) then
-      RaiseServiceCannotBeStopped;
+    begin
+      FServiceManager.HandleError(10);
+      Exit;
+    end;
 
     if not ControlService(FServiceHandle,SERVICE_CONTROL_STOP, LStatus) then
       RaiseLastOSError;
 
     if AWait then
-      WaitFor(SERVICE_STOPPED);
+      if not WaitFor(SERVICE_STOPPED) then
+        Exit;
+
+    Result := True;
   finally
     CleanupHandle;
   end;
 end;
 
-procedure TServiceInfo.WaitFor(const AState: DWORD);
-
-  procedure RaiseServiceDidNotRespond;
-  begin
-    raise EServiceDidNotRespond.Create('Service did not react within timeframe given');
-  end;
-
+function TServiceInfo.WaitFor(const AState: DWORD): Boolean;
 var
   LOldCheckPoint: DWORD;
   LWait: DWORD;
 begin
-  Query;
+  Result := Query;
 
-  while AState <> FServiceStatus.dwCurrentState do
-  begin
-    LOldCheckPoint := FServiceStatus.dwCheckPoint;
-    LWait := FServiceStatus.dwWaitHint;
+  if Result then
+    while AState <> FServiceStatus.dwCurrentState do
+    begin
+      LOldCheckPoint := FServiceStatus.dwCheckPoint;
+      LWait := FServiceStatus.dwWaitHint;
 
-    if LWait <= 0 then
-      LWait := 5000;
-    Sleep(LWait);
+      if LWait <= 0 then
+        LWait := 5000;
 
-    Query;
+      Sleep(LWait);
 
-    if AState = FServiceStatus.dwCurrentState then
-      Break;
+      Query;
 
-    if FServiceStatus.dwCheckPoint <> LOldCheckPoint then
-      RaiseServiceDidNotRespond;
-  end;
+      if AState = FServiceStatus.dwCurrentState then
+        Break;
+
+      if FServiceStatus.dwCheckPoint <> LOldCheckPoint then
+      begin
+        FServiceManager.HandleError(11);
+        Exit(False);
+      end;
+    end;
+
+  Result := AState = FServiceStatus.dwCurrentState;
 end;
 
-procedure TServiceInfo.WaitForPendingServiceState(const AServiceState: TServiceState);
+function TServiceInfo.WaitForPendingServiceState(const AServiceState: TServiceState): Boolean;
 begin
   case AServiceState of
-    ssStartPending:    WaitFor(SERVICE_RUNNING);
-    ssStopPending:     WaitFor(SERVICE_STOPPED);
-    ssContinuePending: WaitFor(SERVICE_RUNNING);
-    ssPausePending:    WaitFor(SERVICE_PAUSED);
+    ssStartPending: Result := WaitFor(SERVICE_RUNNING);
+    ssStopPending: Result := WaitFor(SERVICE_STOPPED);
+    ssContinuePending: Result := WaitFor(SERVICE_RUNNING);
+    ssPausePending: Result := WaitFor(SERVICE_PAUSED);
     else
-      Exit; // supress FixInsight warning
+      Exit(True); // supress FixInsight warning
   end;
 end;
 
@@ -806,12 +931,6 @@ begin
 end;
 
 procedure TServiceInfo.QueryConfig;
-
-  procedure RaiseServiceServiceStartTypeUnknown;
-  begin
-    raise EServiceServiceStartTypeUnknown.Create('Service Start Type unknown');
-  end;
-
 var
   LBuffer: LPQUERY_SERVICE_CONFIG;
   LBytesNeeded: DWORD;
@@ -840,7 +959,10 @@ begin
         SERVICE_DEMAND_START:  FStartType := ssManual;
         SERVICE_DISABLED:      FStartType := ssDisabled;
         else
-          RaiseServiceServiceStartTypeUnknown;
+        begin
+          FServiceManager.HandleError(12);
+          Exit
+        end;
       end;
 
       FBinaryPathName := LBuffer^.lpBinaryPathName;
@@ -913,7 +1035,8 @@ begin
   if not FLive then
     Query;
 
-  WaitForPendingServiceState(GetState);
+  if not WaitForPendingServiceState(GetState) then
+    FServiceManager.HandleError(11, True);
 
   LOldState := GetState;
   // See what we need to do...
@@ -941,7 +1064,10 @@ begin
         ssRunning: Pause(True);
       end;
     else
-      raise Exception.Create('Cannot set a transitional state in TServiceInfo.SetState');
+    begin
+      FServiceManager.HandleError(13, True);
+      Exit;
+    end;
   end;
 end;
 
@@ -957,9 +1083,9 @@ begin
     Exit;
 
   // Alter it...
-  FServiceManager.Lock;
+  if FServiceManager.Lock then
   try
-    GetHandle(SERVICE_CHANGE_CONFIG);
+    if GetHandle(SERVICE_CHANGE_CONFIG) then
     try
       // We locked the manager and are allowed to change the configuration...
       if not ChangeServiceConfig(FServiceHandle, SERVICE_NO_CHANGE, NEW_START_TYPES[AValue], SERVICE_NO_CHANGE,

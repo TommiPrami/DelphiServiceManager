@@ -16,6 +16,7 @@ type
     ButtonStopFirebirdService: TButton;
     MemoLog: TMemo;
     PanelRight: TPanel;
+    ButtonTestErrorHandler: TButton;
     procedure ButtonEnumerateServicesClick(Sender: TObject);
     procedure ButtonFixFirebirdServiceClick(Sender: TObject);
     procedure ButtonQueryFirebirdClick(Sender: TObject);
@@ -23,6 +24,7 @@ type
     procedure ButtonStopFirebirdServiceClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure ButtonTestErrorHandlerClick(Sender: TObject);
   strict private
     FServciceManager: TServiceManager;
     procedure ActivateOrRefreshServiceManager;
@@ -209,6 +211,53 @@ begin
   end;
 
   Log('');
+end;
+
+procedure TFormFirebierdServiceMain.ButtonTestErrorHandlerClick(Sender: TObject);
+var
+  LServciceManager: TServiceManager;
+  LExceptionRaised: Boolean;
+begin
+  Log('Testing error handler...');
+
+  LServciceManager := TServiceManager.Create;
+  try
+    try
+      LExceptionRaised := False;
+      LServciceManager.RaiseExceptions := True;
+
+      LServciceManager.RebuildServicesList;
+    except
+      on E: Exception do
+      begin
+        LExceptionRaised := True;
+        Log(E, 2);
+      end;
+    end;
+
+    if not LExceptionRaised or (LServciceManager.LastErrorCode = 0) or (LServciceManager.LAstErrorMessage.IsEmpty) then
+      raise Exception.Create('Error handler did not work');
+
+    try
+      LExceptionRaised := False;
+      LServciceManager.RaiseExceptions := False;
+
+      LServciceManager.RebuildServicesList;
+    except
+      on E: Exception do
+      begin
+        LExceptionRaised := True;
+        Log(E, 2);
+      end;
+    end;
+
+    if LExceptionRaised or (LServciceManager.LastErrorCode = 0) or (LServciceManager.LAstErrorMessage.IsEmpty) then
+      raise Exception.Create('Error handler did not work')
+    else
+      Log(LServciceManager.LAstErrorMessage, 2);
+  finally
+    LServciceManager.Free;
+  end;
 end;
 
 procedure TFormFirebierdServiceMain.FormCreate(Sender: TObject);

@@ -92,5 +92,16 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
       TabOrder = 4
       OnClick = ButtonFixFirebirdServiceClick
     end
+    object ButtonTestErrorHandler: TButton
+      AlignWithMargins = True
+      Left = 3
+      Top = 158
+      Width = 135
+      Height = 25
+      Align = alTop
+      Caption = 'Test error handler'
+      TabOrder = 5
+      OnClick = ButtonTestErrorHandlerClick
+    end
   end
 end
