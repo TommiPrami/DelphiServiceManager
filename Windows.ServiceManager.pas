@@ -43,6 +43,7 @@ type
   end;
 
 const
+  RAISE_LAST_OS_ERROR = -1;
   ErrorInfoArray: array[0..12] of TErrorInfo =
     (
       (ErrorCode: 1; ExceptionClass: Exception; ErrorMessage: 'BuildServicesList only works when Active.'),
@@ -144,7 +145,7 @@ type
     { Wait for a given status of this service... }
     function WaitFor(const AState: DWORD): Boolean;
     { Fetch the configuration information }
-    procedure QueryConfig;
+    function QueryConfig: Boolean;
   public
     constructor Create(const AParentServiceManager: TServiceManager);
     destructor Destroy; override;
@@ -192,14 +193,16 @@ type
   { A service manager allows the services of a particular machine to be explored and modified. }
   TServiceManager = class(TObject)
   strict private
-    FManagerHandle: SC_HANDLE;
-    FLockHandle: SC_LOCK;
-    FMachineName: string;
-    FServices: TArray<TServiceInfo>;
     FAllowLocking: Boolean;
     FLastErrorCode: Integer;
     FLastErrorMessage: string;
+    FLastSystemErrorCode: DWord;
+    FLastSystemErrorMessage: string;
+    FLockHandle: SC_LOCK;
+    FMachineName: string;
+    FManagerHandle: SC_HANDLE;
     FRaiseExceptions: Boolean;
+    FServices: TArray<TServiceInfo>;
     function GetActive: Boolean;
     procedure SetActive(const ASetToActive: Boolean);
     procedure SetMachineName(const AMachineName: string);
@@ -209,6 +212,7 @@ type
     procedure CheckArrayBounds(const AIndex: Integer);
     procedure SetAllowLocking(const AValue: Boolean);
     function ServiceEnumStatusToServicelClass(const AServiceEnumStatus:  ENUM_SERVICE_STATUS; const AIndex: Integer): TServiceInfo;
+  private
   protected
     function GetManagerHandle: SC_HANDLE;
     { Internal function that frees up all the @link(TServiceInfo) classes. }
@@ -252,6 +256,8 @@ type
     property AllowLocking: Boolean read FAllowLocking write SetAllowLocking;
     property RaiseExceptions: Boolean read FRaiseExceptions write FRaiseExceptions;
     property LastErrorCode: Integer read FLastErrorCode;
+    property LastSystemErrorCode: DWord read FLastSystemErrorCode;
+    property LastSystemErrorMessage: string read FLastSystemErrorMessage;
     property LastErrorMessage: string read FLastErrorMessage;
 
     procedure SortByDisplayName;
@@ -262,7 +268,7 @@ type
 
 implementation
 uses
-  System.Generics.Collections, System.Generics.Defaults;
+  System.Generics.Collections, System.Generics.Defaults, System.SysConst;
 
 procedure RaiseIndexOutOfBounds;
 begin
@@ -315,7 +321,10 @@ begin
     Exit;
 
   if GetLastError <> ERROR_MORE_DATA then
-    RaiseLastOSError;
+  begin
+    HandleError(RAISE_LAST_OS_ERROR);
+    Exit;
+  end;
 
   // And... Get all the data...
   GetMem(LServices, LBytesNeeded); // will raise EOutOfMemory if fails
@@ -345,7 +354,9 @@ end;
 procedure TServiceManager.ResetLastError;
 begin
   FLastErrorCode := 0;
-  FLastErrorMEssage := '';
+  FLastSystemErrorCode := 0;
+  FLastErrorMessage := '';
+  FLastSystemErrorMessage := '';
 end;
 
 procedure TServiceManager.BeginLockingProcess(const AActivateServiceManager: Boolean = True);
@@ -478,14 +489,40 @@ end;
 procedure TServiceManager.HandleError(const AErrorCode: Integer; const AForceException: Boolean = False);
 var
   LErrorInfo: TErrorInfo;
+  LOSError: EOSError;
 begin
-  LErrorInfo := ErrorInfoArray[AErrorCode - 1];
+  FLastErrorCode := AErrorCode;
 
-  FLastErrorCode := LErrorInfo.ErrorCode;
-  FLastErrorMessage := LErrorInfo.ErrorMessage;
+  if FLastErrorCode = RAISE_LAST_OS_ERROR then
+  begin
+    FLastSystemErrorCode := GetLastError;
+    if FLastSystemErrorCode <> 0 then
+      FLastSystemErrorMessage := SysErrorMessage(FLastSystemErrorCode)
+    else
+      FLastSystemErrorMessage := SUnkOSError;
 
-  if FRaiseExceptions or AForceException then
-    raise LErrorInfo.ExceptionClass.Create(FLastErrorMessage);
+
+    if FRaiseExceptions or AForceException then
+    begin
+      if FLastSystemErrorCode <> 0 then
+        LOSError := EOSError.CreateResFmt(@SOSError, [FLastSystemErrorCode, FLastSystemErrorMessage, ''])
+      else
+        LOSError := EOSError.CreateRes(@SUnkOSError);
+
+      LOSError.ErrorCode := FLastSystemErrorCode;
+
+      raise LOSError at ReturnAddress;
+    end;
+  end
+  else
+  begin
+    LErrorInfo := ErrorInfoArray[AErrorCode - 1];
+
+    FLastErrorMessage := LErrorInfo.ErrorMessage;
+
+    if FRaiseExceptions or AForceException then
+      raise LErrorInfo.ExceptionClass.Create(FLastErrorMessage) at ReturnAddress;
+  end;
 end;
 
 function TServiceManager.ServiceEnumStatusToServicelClass(const AServiceEnumStatus:  ENUM_SERVICE_STATUS; const AIndex: Integer): TServiceInfo;
@@ -539,7 +576,10 @@ begin
   FLockHandle := LockServiceDatabase(FManagerHandle);
 
   if FLockHandle = nil then
-    RaiseLastOSError
+  begin
+    HandleError(RAISE_LAST_OS_ERROR);
+    Exit;
+  end
   else
     Result := True;
 end;
@@ -559,7 +599,10 @@ begin
   LVersionInfo.dwOSVersionInfoSize := sizeof(LVersionInfo);
 
   if not GetVersionEx(LVersionInfo) then
-    RaiseLastOSError;
+  begin
+    HandleError(RAISE_LAST_OS_ERROR);
+    Exit;
+  end;
 
   if LVersionInfo.dwPlatformId <> VER_PLATFORM_WIN32_NT then
   begin
@@ -574,7 +617,10 @@ begin
 
   FManagerHandle := OpenSCManager(PChar(FMachineName), nil, LDesiredAccess);
   if not Active then
-    RaiseLastOSError;
+  begin
+    HandleError(RAISE_LAST_OS_ERROR);
+    Exit;
+  end;
 
   // Fetch the srvices list
   Result := RebuildServicesList;
@@ -591,7 +637,7 @@ begin
   // Unlock...
   if not UnlockServiceDatabase(FLockHandle) then
   begin
-    RaiseLastOSError;
+    HandleError(RAISE_LAST_OS_ERROR);
     Exit;
   end;
 
@@ -683,7 +729,10 @@ begin
   FServiceHandle := OpenService(FServiceManager.GetManagerHandle, PChar(FServiceName), AAccess);
 
   if FServiceHandle = 0 then
-    RaiseLastOSError
+  begin
+    FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+    Exit;
+  end
   else
     Result := True;
 end;
@@ -719,7 +768,10 @@ begin
   if FServiceHandle <> 0 then
   begin
     if not QueryServiceStatus(FServiceHandle, LStatus) then
-      RaiseLastOSError;
+    begin
+      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      Exit;
+    end;
   end
   else
   begin
@@ -728,7 +780,10 @@ begin
 
     try
       if not QueryServiceStatus(FServiceHandle, LStatus) then
-        RaiseLastOSError;
+      begin
+        FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+        Exit;
+      end;
     finally
       CleanupHandle;
     end;
@@ -753,7 +808,10 @@ begin
     end;
 
     if not ControlService(FServiceHandle, SERVICE_CONTROL_CONTINUE, LStatus) then
-      RaiseLastOSError;
+    begin
+      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      Exit;
+    end;
 
     if AWait then
       if not WaitFor(SERVICE_RUNNING) then
@@ -780,7 +838,10 @@ begin
     end;
 
     if not ControlService(FServiceHandle,SERVICE_CONTROL_PAUSE, LStatus) then
-      RaiseLastOSError;
+    begin
+      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      Exit;
+    end;
 
     if AWait then
       if not WaitFor(SERVICE_PAUSED) then
@@ -802,7 +863,10 @@ begin
   try
     LServiceArgumentVectors := nil;
     if not StartService(FServiceHandle, 0, LServiceArgumentVectors) then
-      RaiseLastOSError;
+    begin
+      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      Exit;
+    end;
 
     if AWait then
       if not WaitFor(SERVICE_RUNNING) then
@@ -829,7 +893,10 @@ begin
     end;
 
     if not ControlService(FServiceHandle,SERVICE_CONTROL_STOP, LStatus) then
-      RaiseLastOSError;
+    begin
+      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      Exit;
+    end;
 
     if AWait then
       if not WaitFor(SERVICE_STOPPED) then
@@ -912,14 +979,20 @@ begin
       Exit;
 
     if GetLastError <> ERROR_MORE_DATA then
-      RaiseLastOSError;
+    begin
+      FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
+      Exit;
+    end;
 
     // Allocate the buffer needed and fetch all info...
     GetMem(LServicesStatus,LBytesNeeded);
     try
       if not EnumDependentServices(FServiceHandle,SERVICE_ACTIVE + SERVICE_INACTIVE, LServicesStatus, LBytesNeeded, LBytesNeeded,
         LServicesReturned) then
-        RaiseLastOSError;
+      begin
+        FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
+        Exit;
+      end;
 
       // Now process it...
       LTempStatus := LServicesStatus;
@@ -934,27 +1007,36 @@ begin
   finally
     CleanupHandle;
   end;
+
   FDependentsSearched := True;
 end;
 
-procedure TServiceInfo.QueryConfig;
+function TServiceInfo.QueryConfig: Boolean;
 var
   LBuffer: LPQUERY_SERVICE_CONFIG;
   LBytesNeeded: DWORD;
 begin
-  GetHandle(SERVICE_QUERY_CONFIG);
+  Result := False;
+
+  if GetHandle(SERVICE_QUERY_CONFIG) then
   try
     // See how large our buffer must be...
     Assert(not QueryServiceConfig(FServiceHandle, nil, 0, LBytesNeeded), 'Could not get buffer size');
 
     if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
-      RaiseLastOSError;
+    begin
+      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      Exit;
+    end;
 
     GetMem(LBuffer,LBytesNeeded);
     try
       // Perform the query...
       if not QueryServiceConfig(FServiceHandle,LBuffer,LBytesNeeded,LBytesNeeded) then
-        RaiseLastOSError;
+      begin
+        FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+        Exit;
+      end;
 
       // Analyze the query...
       Assert(LBuffer^.dwServiceType and SERVICE_WIN32 <> 0); // It must be a WIN32 service
@@ -975,6 +1057,8 @@ begin
       FBinaryPathName := LBuffer^.lpBinaryPathName;
       FUsername := LBuffer^.lpServiceStartName;
       FConfigQueried := True;
+
+      Result := True;
     finally
       FreeMem(LBuffer);
     end;
@@ -1097,7 +1181,10 @@ begin
       // We locked the manager and are allowed to change the configuration...
       if not ChangeServiceConfig(FServiceHandle, SERVICE_NO_CHANGE, NEW_START_TYPES[AValue], SERVICE_NO_CHANGE,
         nil, nil, nil, nil, nil, nil, nil) then
-        RaiseLastOSError;
+      begin
+        FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
+        Exit;
+      end;
 
       // well... we changed it, mark as such
       FStartType := AValue;
