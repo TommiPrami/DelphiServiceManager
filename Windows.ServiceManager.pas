@@ -749,6 +749,8 @@ begin
     ssStopPending:     WaitFor(SERVICE_STOPPED);
     ssContinuePending: WaitFor(SERVICE_RUNNING);
     ssPausePending:    WaitFor(SERVICE_PAUSED);
+    else
+      Exit; // supress FixInsight warning
   end;
 end;
 
@@ -920,12 +922,12 @@ begin
       if LOldState <> ssStopped then
         Stop(True);
     ssRunning:
-      case LOldState of
+      case LOldState of // FI:W535 Enumerated constant(s) missing in case statement
         ssStopped: Start(True);
         ssPaused:  Continue(True);
       end;
     ssPaused:
-      case LOldState of
+      case LOldState of // FI:W535 Enumerated constant(s) missing in case statement
         ssStopped:
           begin
             Start(True);
