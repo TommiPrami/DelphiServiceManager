@@ -208,7 +208,7 @@ type
     function GetServiceByName(const AName: string): TServiceInfo;
     procedure CheckArrayBounds(const AIndex: Integer);
     procedure SetAllowLocking(const AValue: Boolean);
-    function ServiceEnumStatusToServicelClass(const AServiceEnumStatus:  ENUM_SERVICE_STATUS): TServiceInfo;
+    function ServiceEnumStatusToServicelClass(const AServiceEnumStatus:  ENUM_SERVICE_STATUS; const AIndex: Integer): TServiceInfo;
   protected
     function GetManagerHandle: SC_HANDLE;
     { Internal function that frees up all the @link(TServiceInfo) classes. }
@@ -332,8 +332,7 @@ begin
     SetLength(FServices, LServicesReturned);
     for LIndex := 0 to LServicesReturned - 1 do
     begin
-      FServices[LIndex] := ServiceEnumStatusToServicelClass(LServicesLoopPointer^);
-      FServices[LIndex].FIndex := LIndex;
+      FServices[LIndex] := ServiceEnumStatusToServicelClass(LServicesLoopPointer^, LIndex);
       Inc(LServicesLoopPointer);
     end;
   finally
@@ -489,13 +488,14 @@ begin
     raise LErrorInfo.ExceptionClass.Create(FLastErrorMessage);
 end;
 
-function TServiceManager.ServiceEnumStatusToServicelClass(const AServiceEnumStatus:  ENUM_SERVICE_STATUS): TServiceInfo;
+function TServiceManager.ServiceEnumStatusToServicelClass(const AServiceEnumStatus:  ENUM_SERVICE_STATUS; const AIndex: Integer): TServiceInfo;
 begin
   Result := TServiceInfo.Create(Self);
 
   Result.FServiceName := AServiceEnumStatus.lpServiceName;
   Result.FDisplayName := AServiceEnumStatus.lpDisplayName;
   Result.FServiceStatus := AServiceEnumStatus.ServiceStatus;
+  Result.FIndex := AIndex;
 end;
 
 procedure TServiceManager.SetActive(const ASetToActive: Boolean);
