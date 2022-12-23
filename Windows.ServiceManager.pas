@@ -392,10 +392,11 @@ begin
   Result := FServices;
 
   TArray.Sort<TServiceInfo>(Result, TDelegatedComparer<TServiceInfo>.Construct(
-    function(const Left, Right:TServiceInfo): Integer
+    function(const ALeft, ARight:TServiceInfo): Integer
     begin
-      Result := TComparer<string>.Default.Compare(Left.DisplayName, Right.DisplayName);
-    end));
+      Result := TComparer<string>.Default.Compare(ALeft.DisplayName, ARight.DisplayName);
+    end)
+  );
 end;
 
 procedure TServiceManager.SetActive(const ASetToActive: Boolean);
@@ -941,7 +942,7 @@ begin
         ssRunning: Pause(True);
       end;
     else
-      raise Exception.Create('Cannot set a transitional state in TServiceInfo.');
+      raise Exception.Create('Cannot set a transitional state in TServiceInfo.SetState');
   end;
 end;
 
