@@ -146,7 +146,7 @@ type
     { Fetch the configuration information }
     procedure QueryConfig;
   public
-    constructor Create;
+    constructor Create(const AParentServiceManager: TServiceManager);
     destructor Destroy; override;
 
     { Action: Pause a running service. }
@@ -208,6 +208,7 @@ type
     function GetServiceByName(const AName: string): TServiceInfo;
     procedure CheckArrayBounds(const AIndex: Integer);
     procedure SetAllowLocking(const AValue: Boolean);
+    function ServiceEnumStatusToServicelClass(const AServiceEnumStatus:  ENUM_SERVICE_STATUS): TServiceInfo;
   protected
     function GetManagerHandle: SC_HANDLE;
     { Internal function that frees up all the @link(TServiceInfo) classes. }
@@ -317,7 +318,7 @@ begin
     RaiseLastOSError;
 
   // And... Get all the data...
-  GetMem(LServices, LBytesNeeded);
+  GetMem(LServices, LBytesNeeded); // will raise EOutOfMemory if fails
   try
     LServicesReturned := 0;
     LResumeHandle := 0;
@@ -331,13 +332,8 @@ begin
     SetLength(FServices, LServicesReturned);
     for LIndex := 0 to LServicesReturned - 1 do
     begin
-      FServices[LIndex] := TServiceInfo.Create;
-      FServices[LIndex].FServiceName := LServicesLoopPointer^.lpServiceName;
-      FServices[LIndex].FDisplayName := LServicesLoopPointer^.lpDisplayName;
-      FServices[LIndex].FServiceStatus := LServicesLoopPointer^.ServiceStatus;
-      FServices[LIndex].FServiceManager := Self;
+      FServices[LIndex] := ServiceEnumStatusToServicelClass(LServicesLoopPointer^);
       FServices[LIndex].FIndex := LIndex;
-      
       Inc(LServicesLoopPointer);
     end;
   finally
@@ -493,6 +489,15 @@ begin
     raise LErrorInfo.ExceptionClass.Create(FLastErrorMessage);
 end;
 
+function TServiceManager.ServiceEnumStatusToServicelClass(const AServiceEnumStatus:  ENUM_SERVICE_STATUS): TServiceInfo;
+begin
+  Result := TServiceInfo.Create(Self);
+
+  Result.FServiceName := AServiceEnumStatus.lpServiceName;
+  Result.FDisplayName := AServiceEnumStatus.lpDisplayName;
+  Result.FServiceStatus := AServiceEnumStatus.ServiceStatus;
+end;
+
 procedure TServiceManager.SetActive(const ASetToActive: Boolean);
 begin
   if ASetToActive then
@@ -630,9 +635,11 @@ begin
   FServiceHandle := 0;
 end;
 
-constructor TServiceInfo.Create;
+constructor TServiceInfo.Create(const AParentServiceManager: TServiceManager);
 begin
   inherited Create;
+
+  FServiceManager := AParentServiceManager;
 
   FDependentsSearched := False;
   FConfigQueried := False;
