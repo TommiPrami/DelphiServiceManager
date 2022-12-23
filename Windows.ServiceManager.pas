@@ -71,8 +71,7 @@ type
     { Link the the creating service manager. }
     FServiceManager: TServiceManager;
     { Handle of the service during several member calls. }
-    FServiceHandle
-    : SC_HANDLE;
+    FServiceHandle: SC_HANDLE;
     { Status of this service. This contains several fields for several properties. }
     FServiceStatus: TServiceStatus;
     { Key name of this service. }
