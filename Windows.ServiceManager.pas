@@ -18,7 +18,7 @@ unit Windows.ServiceManager;
 interface
 
 uses
-  System.SysUtils, System.Generics.Collections, Winapi.Windows, Winapi.Winsvc;
+  Winapi.Windows, Winapi.Winsvc, System.Generics.Collections, System.SysUtils;
 
 type
   ECustomServiceManagerException = class(Exception);
@@ -212,7 +212,7 @@ type
     function GetServiceByName(const AName: string): TServiceInfo;
     procedure SetAllowLocking(const AValue: Boolean);
     procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
-  private
+    procedure EnumerateServices(const AServices: PEnumServiceStatus);
   protected
     function GetManagerHandle: SC_HANDLE;
     { Internal function that frees up all the @link(TServiceInfo) classes. }
@@ -270,11 +270,6 @@ implementation
 uses
   System.Generics.Defaults, System.SysConst;
 
-procedure RaiseIndexOutOfBounds;
-begin
-  raise EIndexOutOfBounds.Create('Index out of bounds');
-end;
-
 function ServiceStateToString(const AServiceState: TServiceState): string;
 begin
   case AServiceState of
@@ -293,12 +288,9 @@ end;
 function TServiceManager.RebuildServicesList: Boolean;
 var
   LServices: PEnumServiceStatus;
-  LServicesLoopPointer: PEnumServiceStatus;
   LBytesNeeded: DWORD;
   LServicesReturned: DWORD;
   LResumeHandle: DWORD;
-  LIndex: Integer;
-  LServiceInfo: TServiceInfo;
 begin
   Result := False;
 
@@ -330,21 +322,7 @@ begin
   // And... Get all the data...
   GetMem(LServices, LBytesNeeded); // will raise EOutOfMemory if fails
   try
-    LServicesReturned := 0;
-    LResumeHandle := 0;
-
-    LServicesLoopPointer := LServices;
-
-    if not EnumServicesStatus(FManagerHandle, SERVICE_WIN32, SERVICE_STATE_ALL, LServices , LBytesNeeded, LBytesNeeded,
-      LServicesReturned, LResumeHandle) then
-      Exit;
-
-    for LIndex := 0 to LServicesReturned - 1 do
-    begin
-      ServiceToLists(LServicesLoopPointer^);
-
-      Inc(LServicesLoopPointer);
-    end;
+    EnumerateServices(LServices);
   finally
     FreeMem(LServices);
   end;
@@ -421,6 +399,30 @@ begin
     Active := False;
 
   AllowLocking := False;
+end;
+
+procedure TServiceManager.EnumerateServices(const AServices: PEnumServiceStatus);
+var
+  LIndex: Integer;
+  LServicesLoopPointer: PEnumServiceStatus;
+  LServicesReturned: DWORD;
+  LResumeHandle: DWORD;
+  LBytesNeeded: DWORD;
+begin
+  LServicesReturned := 0;
+  LResumeHandle := 0;
+  LServicesLoopPointer := AServices;
+
+  if not EnumServicesStatus(FManagerHandle, SERVICE_WIN32, SERVICE_STATE_ALL, AServices, LBytesNeeded, LBytesNeeded,
+    LServicesReturned, LResumeHandle) then
+    Exit;
+
+  for LIndex := 0 to LServicesReturned - 1 do
+  begin
+    ServiceToLists(LServicesLoopPointer^);
+
+    Inc(LServicesLoopPointer);
+  end;
 end;
 
 function TServiceManager.GetActive: Boolean;
@@ -670,9 +672,6 @@ end;
 function TServiceInfo.GetDependent(const AIndex: Integer): TServiceInfo;
 begin
   SearchDependents;
-
-  if (AIndex < 0) or (AIndex >= Length(FDependents)) then
-    RaiseIndexOutOfBounds;
 
   Result := FDependents[AIndex];
 end;
