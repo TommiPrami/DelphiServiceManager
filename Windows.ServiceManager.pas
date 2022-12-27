@@ -255,12 +255,12 @@ type
       Property can only be set while inactive. }
     property AllowLocking: Boolean read FAllowLocking write SetAllowLocking;
     property RaiseExceptions: Boolean read FRaiseExceptions write FRaiseExceptions;
+    //
     property LastErrorCode: Integer read FLastErrorCode;
     property LastSystemErrorCode: DWord read FLastSystemErrorCode;
     property LastSystemErrorMessage: string read FLastSystemErrorMessage;
     property LastErrorMessage: string read FLastErrorMessage;
-
-    procedure SortByDisplayName;
+    //
     function GetServicesByDisplayName: TArray<TServiceInfo>;
   end;
 
@@ -654,20 +654,6 @@ begin
   end;
 
   FAllowLocking := AValue;
-end;
-
-procedure TServiceManager.SortByDisplayName;
-var
-  LIndex: Integer;
-begin
-  TArray.Sort<TServiceInfo>(FServices, TDelegatedComparer<TServiceInfo>.Construct(
-    function(const Left, Right:TServiceInfo): Integer
-    begin
-      Result := TComparer<String>.Default.Compare(Left.DisplayName, Right.DisplayName);
-    end));
-
-  for LIndex := Low(FServices) to High(FServices) do
-    FServices[LIndex].Index := LIndex;     
 end;
 
 { TServiceInfo }
