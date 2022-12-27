@@ -39,7 +39,6 @@ type
     ErrorCode: Integer;
     ExceptionClass: ExceptClass;
     ErrorMessage: string;
-    // TODO: System error code. maybe...
   end;
 
 const
@@ -59,7 +58,6 @@ const
       (ErrorCode: 11; ExceptionClass: EServiceDidNotRespond; ErrorMessage: 'Service did not react within timeframe given.'),
       (ErrorCode: 12; ExceptionClass: EServiceServiceStartTypeUnknown; ErrorMessage: 'Service Start Type unknown.'),
       (ErrorCode: 13; ExceptionClass: ECannotSetTransitionalState; ErrorMessage: 'Cannot set a transitional state.')
-
    );
 
 type
