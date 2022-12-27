@@ -18,7 +18,7 @@ unit Windows.ServiceManager;
 interface
 
 uses
-  System.SysUtils, Winapi.Windows, Winapi.Winsvc;
+  System.SysUtils, System.Generics.Collections, Winapi.Windows, Winapi.Winsvc;
 
 type
   ECustomServiceManagerException = class(Exception);
@@ -202,16 +202,16 @@ type
     FMachineName: string;
     FManagerHandle: SC_HANDLE;
     FRaiseExceptions: Boolean;
-    FServices: TArray<TServiceInfo>;
+    FServicesList: TObjectList<TServiceInfo>;
+    FServicesByName: TDictionary<string, TServiceInfo>;
     function GetActive: Boolean;
     procedure SetActive(const ASetToActive: Boolean);
     procedure SetMachineName(const AMachineName: string);
     function GetServiceCount: Integer;
     function GetService(const AIndex: Integer): TServiceInfo;
     function GetServiceByName(const AName: string): TServiceInfo;
-    procedure CheckArrayBounds(const AIndex: Integer);
     procedure SetAllowLocking(const AValue: Boolean);
-    function ServiceEnumStatusToServicelClass(const AServiceEnumStatus:  ENUM_SERVICE_STATUS; const AIndex: Integer): TServiceInfo;
+    procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
   private
   protected
     function GetManagerHandle: SC_HANDLE;
@@ -268,7 +268,7 @@ type
 
 implementation
 uses
-  System.Generics.Collections, System.Generics.Defaults, System.SysConst;
+  System.Generics.Defaults, System.SysConst;
 
 procedure RaiseIndexOutOfBounds;
 begin
@@ -298,6 +298,7 @@ var
   LServicesReturned: DWORD;
   LResumeHandle: DWORD;
   LIndex: Integer;
+  LServiceInfo: TServiceInfo;
 begin
   Result := False;
 
@@ -338,10 +339,10 @@ begin
       LServicesReturned, LResumeHandle) then
       Exit;
 
-    SetLength(FServices, LServicesReturned);
     for LIndex := 0 to LServicesReturned - 1 do
     begin
-      FServices[LIndex] := ServiceEnumStatusToServicelClass(LServicesLoopPointer^, LIndex);
+      ServiceToLists(LServicesLoopPointer^);
+
       Inc(LServicesLoopPointer);
     end;
   finally
@@ -367,20 +368,9 @@ begin
     Active := True;
 end;
 
-procedure TServiceManager.CheckArrayBounds(const AIndex: Integer);
-begin
-  if (AIndex < 0) or (AIndex >= Length(FServices)) then
-    RaiseIndexOutOfBounds;
-end;
-
 procedure TServiceManager.CleanupServices;
-var
-  LIndex: Integer;
 begin
-  for LIndex := 0 to High(FServices) do
-    FServices[LIndex].Free;
-
-  SetLength(FServices, 0);
+  FServicesList.Clear;
 end;
 
 function TServiceManager.Close: Boolean;
@@ -408,6 +398,8 @@ constructor TServiceManager.Create;
 begin
   inherited Create;
 
+  FServicesList := TObjectList<TServiceInfo>.Create(True);
+  FServicesByName := TDictionary<string, TServiceInfo>.Create;
   ResetLastError;
   FRaiseExceptions := True;
   FManagerHandle := 0;
@@ -416,6 +408,9 @@ end;
 destructor TServiceManager.Destroy;
 begin
   Active := False;
+
+  FServicesList.Free;
+  FServicesByName.Free;
 
   inherited Destroy;
 end;
@@ -440,43 +435,27 @@ end;
 
 function TServiceManager.GetService(const AIndex: Integer): TServiceInfo;
 begin
-  // Sanity check
-  CheckArrayBounds(AIndex);
-
   // Fetch the object of interest
-  Result := FServices[AIndex];
+  Result := FServicesList[AIndex];
 end;
 
 function TServiceManager.GetServiceByName(const AName: string): TServiceInfo;
-var
-  LIndex: Integer;
-  LCurrentService: TServiceInfo;
 begin
-  Result := nil;
-
-  for LIndex := 0 to High(FServices) do
+  if not FServicesByName.TryGetValue(AName.ToLower, Result) then
   begin
-    LCurrentService := FServices[LIndex];
-
-    if SameText(LCurrentService.Name, AName) then
-    begin
-      Result := LCurrentService;
-      Break;
-    end;
-  end;
-
-  if not Assigned(Result) then
+    Result := nil;
     HandleError(2);
+  end;
 end;
 
 function TServiceManager.GetServiceCount: Integer;
 begin
-  Result := Length(FServices);
+  Result := FServicesList.Count;
 end;
 
 function TServiceManager.GetServicesByDisplayName: TArray<TServiceInfo>;
 begin
-  Result := FServices;
+  Result := FServicesList.ToArray;;
 
   TArray.Sort<TServiceInfo>(Result, TDelegatedComparer<TServiceInfo>.Construct(
     function(const ALeft, ARight:TServiceInfo): Integer
@@ -501,7 +480,6 @@ begin
     else
       FLastSystemErrorMessage := SUnkOSError;
 
-
     if FRaiseExceptions or AForceException then
     begin
       if FLastSystemErrorCode <> 0 then
@@ -525,14 +503,17 @@ begin
   end;
 end;
 
-function TServiceManager.ServiceEnumStatusToServicelClass(const AServiceEnumStatus:  ENUM_SERVICE_STATUS; const AIndex: Integer): TServiceInfo;
+procedure TServiceManager.ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
+var
+  LSereviceInfo: TServiceInfo;
 begin
-  Result := TServiceInfo.Create(Self);
+  LSereviceInfo := TServiceInfo.Create(Self);
+  LSereviceInfo.FServiceName := AServiceEnumStatus.lpServiceName;
+  LSereviceInfo.FDisplayName := AServiceEnumStatus.lpDisplayName;
+  LSereviceInfo.FServiceStatus := AServiceEnumStatus.ServiceStatus;
 
-  Result.FServiceName := AServiceEnumStatus.lpServiceName;
-  Result.FDisplayName := AServiceEnumStatus.lpDisplayName;
-  Result.FServiceStatus := AServiceEnumStatus.ServiceStatus;
-  Result.FIndex := AIndex;
+  LSereviceInfo.FIndex := FServicesList.Add(LSereviceInfo);;
+  FServicesByName.Add(LSereviceInfo.FServiceName.ToLower, LSereviceInfo);
 end;
 
 procedure TServiceManager.SetActive(const ASetToActive: Boolean);
