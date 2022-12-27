@@ -200,17 +200,17 @@ type
     FMachineName: string;
     FManagerHandle: SC_HANDLE;
     FRaiseExceptions: Boolean;
-    FServicesList: TObjectList<TServiceInfo>;
     FServicesByName: TDictionary<string, TServiceInfo>;
+    FServicesList: TObjectList<TServiceInfo>;
     function GetActive: Boolean;
-    procedure SetActive(const ASetToActive: Boolean);
-    procedure SetMachineName(const AMachineName: string);
-    function GetServiceCount: Integer;
     function GetService(const AIndex: Integer): TServiceInfo;
     function GetServiceByName(const AName: string): TServiceInfo;
-    procedure SetAllowLocking(const AValue: Boolean);
-    procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
+    function GetServiceCount: Integer;
     procedure EnumerateServices(const AServices: PEnumServiceStatus);
+    procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
+    procedure SetActive(const ASetToActive: Boolean);
+    procedure SetAllowLocking(const AValue: Boolean);
+    procedure SetMachineName(const AMachineName: string);
   protected
     function GetManagerHandle: SC_HANDLE;
     { Internal function that frees up all the @link(TServiceInfo) classes. }
@@ -347,6 +347,7 @@ end;
 procedure TServiceManager.CleanupServices;
 begin
   FServicesList.Clear;
+  FServicesByName.Clear;
 end;
 
 function TServiceManager.Close: Boolean;
