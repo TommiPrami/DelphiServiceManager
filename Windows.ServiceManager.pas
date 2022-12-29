@@ -206,6 +206,8 @@ uses
 
 function ServiceStateToString(const AServiceState: TServiceState): string;
 begin
+  // TODO: Might be better to use "Starting[...]" instead of "Start pending..."
+  // TODO: Should make this easier to localize, if needed.
   case AServiceState of
     ssStopped: Result := 'Stopped';
     ssStartPending: Result := 'Start pending...';
