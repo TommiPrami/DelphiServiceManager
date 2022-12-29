@@ -3,7 +3,7 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
   Top = 0
   Caption = 'FormFirebierdServiceMain'
   ClientHeight = 411
-  ClientWidth = 918
+  ClientWidth = 1200
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,7 +16,7 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
   object MemoLog: TMemo
     Left = 0
     Top = 0
-    Width = 635
+    Width = 917
     Height = 411
     Align = alClient
     Font.Charset = DEFAULT_CHARSET
@@ -29,7 +29,7 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
     TabOrder = 0
   end
   object PanelRight: TPanel
-    Left = 635
+    Left = 917
     Top = 0
     Width = 283
     Height = 411

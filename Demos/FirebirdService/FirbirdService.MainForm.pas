@@ -147,9 +147,8 @@ begin
   LServciceManager := TServiceManager.Create;
   try
     try
-
-      LServciceManager.BeginLockingProcess;
       try
+        LServciceManager.BeginLockingProcess;
         LFirebirdService := LServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
         if LFirebirdService.State = ssRunning then
@@ -171,18 +170,18 @@ begin
         end;
 
         Log('Service state: ' + ServiceStateToString(LFirebirdService.State), 1);
-      except
-        on E: Exception do
-          Log(E, 2);
+      finally
+        LServciceManager.EndLockingProcess;
       end;
     finally
-      LServciceManager.EndLockingProcess;
+      LServciceManager.Free;
     end;
-  finally
-    LServciceManager.Free;
-  end;
 
-  Log('');
+    Log('');
+  except
+    on E: Exception do
+      Log(E, 2);
+  end;
 end;
 
 procedure TFormFirebierdServiceMain.ButtonQueryFirebirdClick(Sender: TObject);
@@ -311,6 +310,8 @@ begin
   finally
     LServciceManager.Free;
   end;
+
+  Log('');
 end;
 
 procedure TFormFirebierdServiceMain.FormCreate(Sender: TObject);
@@ -349,6 +350,7 @@ end;
 procedure TFormFirebierdServiceMain.Log(const AException: Exception; const AIndent: Integer = 0);
 begin
   Log('Exception ' + AException.ClassName + ' occurent, with message: "' + AException.Message + '"', AIndent);
+  Log('');
 end;
 
 function TFormFirebierdServiceMain.RemoveLineBreaks(const AMessage: string): string;
