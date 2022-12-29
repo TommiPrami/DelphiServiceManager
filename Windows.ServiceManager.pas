@@ -622,6 +622,8 @@ var
   LBytesNeeded: DWORD;
   LServicesReturned: DWORD;
 begin
+  Result := [];
+
   if GetHandle(SERVICE_ENUMERATE_DEPENDENTS) then
   try
     // See how many dependents we have...
