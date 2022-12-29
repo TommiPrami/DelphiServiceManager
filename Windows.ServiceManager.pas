@@ -204,34 +204,36 @@ type
     FServicesList: TObjectList<TServiceInfo>;
     function GetActive: Boolean;
     function GetService(const AIndex: Integer): TServiceInfo;
-    function GetServiceByName(const AName: string): TServiceInfo;
     function GetServiceCount: Integer;
-    procedure EnumerateServices(const AServices: PEnumServiceStatus);
+    procedure EnumerateAndAddServices(const AServices: PEnumServiceStatus);
     procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
     procedure SetActive(const ASetToActive: Boolean);
     procedure SetAllowLocking(const AValue: Boolean);
     procedure SetMachineName(const AMachineName: string);
-  protected
-    function GetManagerHandle: SC_HANDLE;
-    { Internal function that frees up all the @link(TServiceInfo) classes. }
     procedure CleanupServices;
-    { Internal function for locking the manager }
+  protected
+    { using classic protected visibility to give TServiceInfo access to TServiceManager services that nare not public }
+    function GetManagerHandle: SC_HANDLE;
     function Lock: Boolean;
-    { Internal function for unlocking the manager }
     function Unlock: Boolean;
-    procedure ResetLastError;
     procedure HandleError(const AErrorCode: Integer; const AForceException: Boolean = False);
+    procedure ResetLastError;
   public
     constructor Create;
     destructor Destroy; override;
 
+    // Begin- and EndLockingProcess, so can easily do propcess between try..finally, which need locking
     procedure BeginLockingProcess(const AActivateServiceManager: Boolean = True);
     procedure EndLockingProcess;
+    //
     function Open: Boolean;
     function Close: Boolean;
     { Requeries the states, names etc of all services on the given @link(MachineName).
       Works only while active. }
     function RebuildServicesList: Boolean;
+    { Find services by name (case insensitive). Works only while active. If no service can be found
+      an exception will be raised. }
+    function ServiceByName(const AServiceName: string): TServiceInfo;
     { Delete a service... }
     // procedure DeleteService(Index: Integer);
     { Get the number of services. This number is refreshed when the @link(Active) is
@@ -241,24 +243,23 @@ type
       set to True or @link(RebuildServicesList) is called. Works only while active. Valid Index
       values are 0..@link(ServiceCount) - 1. }
     property Services[const AIndex: Integer]: TServiceInfo read GetService;
-    { Find services by name (case insensitive). Works only while active. If no service can be found
-      an exception will be raised. }
-    property ServiceByName[const SerciveName: string]: TServiceInfo read GetServiceByName;
     { Activate / deactivate the service manager. In active state can you access the individual
-      service }
+      service, check RaiseExceptions property and open and close methods, thiose will affect on how this property
+      works }
     property Active: Boolean read GetActive write SetActive;
     { The machine name for which you want the services list. }
     property MachineName: string read FMachineName write SetMachineName;
     { Allow locking... Is needed only when changing several properties in TServiceInfo.
       Property can only be set while inactive. }
     property AllowLocking: Boolean read FAllowLocking write SetAllowLocking;
+    { Raise Exceptions, if all functions should return False if it fails, then more info at Last*Error* properties}
     property RaiseExceptions: Boolean read FRaiseExceptions write FRaiseExceptions;
-    //
+    // Error properties, check HandleError()
     property LastErrorCode: Integer read FLastErrorCode;
     property LastSystemErrorCode: DWord read FLastSystemErrorCode;
     property LastSystemErrorMessage: string read FLastSystemErrorMessage;
     property LastErrorMessage: string read FLastErrorMessage;
-    //
+    { Get array of services, sorted by display name, Serrvice manager owns objects, so handle with care. }
     function GetServicesByDisplayName: TArray<TServiceInfo>;
   end;
 
@@ -320,7 +321,7 @@ begin
   // And... Get all the data...
   GetMem(LServices, LBytesNeeded); // will raise EOutOfMemory if fails
   try
-    EnumerateServices(LServices);
+    EnumerateAndAddServices(LServices);
   finally
     FreeMem(LServices);
   end;
@@ -400,7 +401,7 @@ begin
   AllowLocking := False;
 end;
 
-procedure TServiceManager.EnumerateServices(const AServices: PEnumServiceStatus);
+procedure TServiceManager.EnumerateAndAddServices(const AServices: PEnumServiceStatus);
 var
   LIndex: Integer;
   LServicesLoopPointer: PEnumServiceStatus;
@@ -440,9 +441,9 @@ begin
   Result := FServicesList[AIndex];
 end;
 
-function TServiceManager.GetServiceByName(const AName: string): TServiceInfo;
+function TServiceManager.ServiceByName(const AServiceName: string): TServiceInfo;
 begin
-  if not FServicesByName.TryGetValue(AName.ToLower, Result) then
+  if not FServicesByName.TryGetValue(AServiceName.ToLower, Result) then
   begin
     Result := nil;
     HandleError(2);
@@ -921,10 +922,11 @@ end;
 procedure TServiceInfo.SearchDependents;
 var
   LServicesStatus: PEnumServiceStatus;
-  LTempStatus: PEnumServiceStatus;
+  LLoopStatus: PEnumServiceStatus;
   LBytesNeeded: DWORD;
   LServicesReturned: DWORD;
   LIndex: Integer;
+  LServiceInfo: TServiceInfo;
 begin
   if FDependentsSearched then
     Exit;
@@ -960,11 +962,17 @@ begin
       end;
 
       // Now process it...
-      LTempStatus := LServicesStatus;
+      LLoopStatus := LServicesStatus;
+
       SetLength(FDependents,LServicesReturned);
-      for LIndex := 0 to High(FDependents) do begin
-        FDependents[LIndex] := FServiceManager.ServiceByName[LTempStatus^.lpServiceName];
-        Inc(LTempStatus);
+      for LIndex := 0 to High(FDependents) do
+      begin
+        LServiceInfo := FServiceManager.ServiceByName(LLoopStatus^.lpServiceName);;
+
+        if Assigned(LServiceInfo) then
+          FDependents[LIndex] := LServiceInfo;
+
+        Inc(LLoopStatus);
       end;
     finally
       FreeMem(LServicesStatus);

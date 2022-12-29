@@ -97,7 +97,7 @@ begin
 
       LServciceManager.BeginLockingProcess;
       try
-        LFirebirdService := LServciceManager.ServiceByName[FIREBIRD_DEFAULT_SERVICE_NAME];
+        LFirebirdService := LServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
         if LFirebirdService.State = ssRunning then
         begin
@@ -142,7 +142,7 @@ begin
   try
     ActivateOrRefreshServiceManager;
 
-    LFirebirdService := FServciceManager.ServiceByName[FIREBIRD_DEFAULT_SERVICE_NAME];
+    LFirebirdService := FServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
     LServiceRunning := LFirebirdService.State = ssRunning;
     Log(IfThen(LServiceRunning, 'Firebird Service Runnin', 'Firebird Service NOT Runnin'), 1);
@@ -166,7 +166,7 @@ begin
   try
    ActivateOrRefreshServiceManager;
 
-    LFirebirdService := FServciceManager.ServiceByName[FIREBIRD_DEFAULT_SERVICE_NAME];
+    LFirebirdService := FServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
     if LFirebirdService.State <> ssRunning then
     begin
@@ -194,7 +194,7 @@ begin
   try
     ActivateOrRefreshServiceManager;
 
-    LFirebirdService := FServciceManager.ServiceByName[FIREBIRD_DEFAULT_SERVICE_NAME];
+    LFirebirdService := FServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
     if LFirebirdService.State <> ssStopped then
     begin
