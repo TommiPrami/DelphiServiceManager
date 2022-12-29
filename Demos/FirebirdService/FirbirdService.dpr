@@ -2,7 +2,8 @@
 
 uses
   Vcl.Forms,
-  FirbirdService.MainForm in 'FirbirdService.MainForm.pas' {FormFirebierdServiceMain};
+  FirbirdService.MainForm in 'FirbirdService.MainForm.pas' {FormFirebierdServiceMain},
+  Windows.ServiceManager.Types in '..\..\Windows.ServiceManager.Types.pas';
 
 {$R *.res}
 

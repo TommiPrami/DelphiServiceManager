@@ -42,7 +42,7 @@ var
 implementation
 
 uses
-  System.StrUtils;
+  System.StrUtils, Windows.ServiceManager.Types;
 
 const
   FIREBIRD_DEFAULT_SERVICE_NAME = 'FirebirdServerDefaultInstance';
