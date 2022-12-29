@@ -53,6 +53,7 @@ type
     FStartType: TServiceStartup;
     FBinaryPathName: string;
     FUserName: string;
+    procedure DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer);
     function GetDependent(const AIndex: Integer): TServiceInfo;
     function GetDependentCount: Integer;
     function GetState: TServiceState;
@@ -599,6 +600,27 @@ begin
   FLive := False;
 end;
 
+procedure TServiceInfo.DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer);
+var
+  LIndex: Integer;
+  LLoopStatusPointer: PEnumServiceStatus;
+  LServiceInfo: TServiceInfo;
+begin
+  SetLength(FDependents, AServiceInfoCount);
+
+  LLoopStatusPointer := AQServicesStatus;
+
+  for LIndex := 0 to High(FDependents) do
+  begin
+    LServiceInfo := FServiceManager.ServiceByName(LLoopStatusPointer^.lpServiceName);;
+
+    if Assigned(LServiceInfo) then
+      FDependents[LIndex] := LServiceInfo;
+
+    Inc(LLoopStatusPointer);
+  end;
+end;
+
 destructor TServiceInfo.Destroy;
 begin
   CleanupHandle;
@@ -859,11 +881,8 @@ end;
 procedure TServiceInfo.SearchDependents;
 var
   LServicesStatus: PEnumServiceStatus;
-  LLoopStatus: PEnumServiceStatus;
   LBytesNeeded: DWORD;
   LServicesReturned: DWORD;
-  LIndex: Integer;
-  LServiceInfo: TServiceInfo;
 begin
   if FDependentsSearched then
     Exit;
@@ -889,28 +908,16 @@ begin
     end;
 
     // Allocate the buffer needed and fetch all info...
-    GetMem(LServicesStatus,LBytesNeeded);
+    GetMem(LServicesStatus, LBytesNeeded);
     try
-      if not EnumDependentServices(FServiceHandle,SERVICE_ACTIVE + SERVICE_INACTIVE, LServicesStatus, LBytesNeeded, LBytesNeeded,
-        LServicesReturned) then
+      if not EnumDependentServices(FServiceHandle, SERVICE_ACTIVE + SERVICE_INACTIVE, LServicesStatus, LBytesNeeded,
+        LBytesNeeded, LServicesReturned) then
       begin
         FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
         Exit;
       end;
 
-      // Now process it...
-      LLoopStatus := LServicesStatus;
-
-      SetLength(FDependents,LServicesReturned);
-      for LIndex := 0 to High(FDependents) do
-      begin
-        LServiceInfo := FServiceManager.ServiceByName(LLoopStatus^.lpServiceName);;
-
-        if Assigned(LServiceInfo) then
-          FDependents[LIndex] := LServiceInfo;
-
-        Inc(LLoopStatus);
-      end;
+      DependenciesToList(LServicesStatus, LServicesReturned);
     finally
       FreeMem(LServicesStatus);
     end;
