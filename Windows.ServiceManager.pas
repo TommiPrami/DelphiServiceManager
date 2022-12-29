@@ -27,35 +27,21 @@ type
   { Gives information of and controls a single Service. Can be accessed via @link(TServiceManager). }
   TServiceInfo = class(TObject)
   private
-    { Placeholder of the Index property.  Assigned by the ServiceManager that created this instance. }
     FIndex: Integer;
-    { Link the the creating service manager. }
     FServiceManager: TServiceManager;
-    { Handle of the service during several member calls. }
     FServiceHandle: SC_HANDLE;
-    { Status of this service. This contains several fields for several properties. }
     FServiceStatus: TServiceStatus;
-    { Key name of this service. }
     FServiceName: string;
-    { Display name of this service. }
     FDisplayName: string;
-    { Are the depenedents searched. If so the @link(FDependents) array is filled with those. }
-    FDependentsSearched: Boolean;
-    { Array of @link(TServiceInfo) instances that depent on this service. Only filled when
-      @link(FDependentsSearched) is True. }
-    FDependents: array of TServiceInfo;
     { Placeholder for the live}
     FLive: Boolean;
-    // Query Config
     FConfigQueried: Boolean;
     FOwnProcess: Boolean;
     FInteractive: Boolean;
     FStartType: TServiceStartup;
     FBinaryPathName: string;
     FUserName: string;
-    procedure DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer);
-    function GetDependent(const AIndex: Integer): TServiceInfo;
-    function GetDependentCount: Integer;
+    function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer): TArray<TServiceInfo>;
     function GetState: TServiceState;
     function GetOwnProcess: Boolean;
     function GetInteractive: Boolean;
@@ -71,8 +57,6 @@ type
     { Open a handle to the service with the given access rights.
       This handle can be deleted via @link(CleanupHandle). }
     function GetHandle(const AAccess: DWORD): Boolean;
-    { Query all dependent services (list them via the @link(TServiceManager). }
-    procedure SearchDependents;
     { Query the current status of this service }
     function Query: Boolean;
     { Wait for a given status of this service... }
@@ -83,6 +67,9 @@ type
     constructor Create(const AParentServiceManager: TServiceManager);
     destructor Destroy; override;
 
+    { Get array of services that depent on this service, might return nil items, at least for now }
+    // TODO: Handle nil item issue some way
+    function Dependents: TArray<TServiceInfo>;
     { Action: Pause a running service. }
     function Pause(const AWait: Boolean = True): Boolean;
     { Action: Continue a paused service. }
@@ -96,10 +83,6 @@ type
     property Name: string read FServiceName;
     { Display name of this service }
     property DisplayName: string read FDisplayName;
-    { Number of dependant services of this service }
-    property DependentCount: Integer read GetDependentCount;
-    { Access to serviced that depent on this service }
-    property Dependents[const AIndex: Integer]: TServiceInfo read GetDependent;
     { The current state of the service. You can set the service only to the non-transitional states.
       You can restart the service by first setting the State to first ssStopped and second ssRunning. }
     property State: TServiceState read GetState write SetState;
@@ -120,6 +103,7 @@ type
     property ServiceAccepts: TServiceAccepts read GetServiceAccepts;
     { Index in ServiceManagers list }
     property Index: Integer read FIndex write FIndex;
+    { }
     property UserName: string read FUserName;
   end;
 
@@ -140,12 +124,12 @@ type
     function GetActive: Boolean;
     function GetService(const AIndex: Integer): TServiceInfo;
     function GetServiceCount: Integer;
-    procedure EnumerateAndAddServices(const AServices: PEnumServiceStatus);
+    procedure CleanupServices;
+    procedure EnumerateAndAddServices(const AServices: PEnumServiceStatus; const AByesNeeded: DWORD);
     procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
     procedure SetActive(const ASetToActive: Boolean);
     procedure SetAllowLocking(const AValue: Boolean);
     procedure SetMachineName(const AMachineName: string);
-    procedure CleanupServices;
   protected
     { using classic protected visibility to give TServiceInfo access to TServiceManager services that nare not public }
     function GetManagerHandle: SC_HANDLE;
@@ -168,7 +152,7 @@ type
     function RebuildServicesList: Boolean;
     { Find services by name (case insensitive). Works only while active. If no service can be found
       an exception will be raised. }
-    function ServiceByName(const AServiceName: string): TServiceInfo;
+    function ServiceByName(const AServiceName: string; const AAllowUnkown: Boolean = False): TServiceInfo;
     { Delete a service... }
     // procedure DeleteService(Index: Integer);
     { Get the number of services. This number is refreshed when the @link(Active) is
@@ -241,11 +225,11 @@ begin
   ResetLastError;
   CleanupServices;
 
-  // Get the amount of memory we need...
   LServicesReturned := 0;
   LResumeHandle := 0;
   LServices := nil;
 
+  // Get the amount of memory needed...
   if EnumServicesStatus(FManagerHandle, SERVICE_WIN32, SERVICE_STATE_ALL, LServices, 0, LBytesNeeded, LServicesReturned,
     LResumeHandle) then
     Exit;
@@ -259,7 +243,7 @@ begin
   // And... Get all the data...
   GetMem(LServices, LBytesNeeded); // will raise EOutOfMemory if fails
   try
-    EnumerateAndAddServices(LServices);
+    EnumerateAndAddServices(LServices, LBytesNeeded);
   finally
     FreeMem(LServices);
   end;
@@ -339,9 +323,9 @@ begin
   AllowLocking := False;
 end;
 
-procedure TServiceManager.EnumerateAndAddServices(const AServices: PEnumServiceStatus);
+procedure TServiceManager.EnumerateAndAddServices(const AServices: PEnumServiceStatus; const AByesNeeded: DWORD);
 var
-  LIndex: Integer;
+  LIndex: DWORD;
   LServicesLoopPointer: PEnumServiceStatus;
   LServicesReturned: DWORD;
   LResumeHandle: DWORD;
@@ -349,17 +333,20 @@ var
 begin
   LServicesReturned := 0;
   LResumeHandle := 0;
-  LServicesLoopPointer := AServices;
+  LBytesNeeded := AByesNeeded;
 
   if not EnumServicesStatus(FManagerHandle, SERVICE_WIN32, SERVICE_STATE_ALL, AServices, LBytesNeeded, LBytesNeeded,
     LServicesReturned, LResumeHandle) then
     Exit;
 
-  for LIndex := 0 to LServicesReturned - 1 do
+  LServicesLoopPointer := AServices;
+  LIndex := 0;
+  while LIndex <= LServicesReturned - 1 do
   begin
     ServiceToLists(LServicesLoopPointer^);
 
     Inc(LServicesLoopPointer);
+    Inc(LIndex);
   end;
 end;
 
@@ -379,12 +366,14 @@ begin
   Result := FServicesList[AIndex];
 end;
 
-function TServiceManager.ServiceByName(const AServiceName: string): TServiceInfo;
+function TServiceManager.ServiceByName(const AServiceName: string; const AAllowUnkown: Boolean = False): TServiceInfo;
 begin
   if not FServicesByName.TryGetValue(AServiceName.ToLower, Result) then
   begin
     Result := nil;
-    HandleError(2);
+
+    if not AAllowUnkown then
+      HandleError(2);
   end;
 end;
 
@@ -395,7 +384,7 @@ end;
 
 function TServiceManager.GetServicesByDisplayName: TArray<TServiceInfo>;
 begin
-  Result := FServicesList.ToArray;;
+  Result := FServicesList.ToArray;
 
   TArray.Sort<TServiceInfo>(Result, TDelegatedComparer<TServiceInfo>.Construct(
     function(const ALeft, ARight:TServiceInfo): Integer
@@ -594,30 +583,78 @@ begin
 
   FServiceManager := AParentServiceManager;
 
-  FDependentsSearched := False;
   FConfigQueried := False;
   FServiceHandle := 0;
   FLive := False;
 end;
 
-procedure TServiceInfo.DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer);
+function TServiceInfo.DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer): TArray<TServiceInfo>;
 var
+  LServiceName: string;
   LIndex: Integer;
   LLoopStatusPointer: PEnumServiceStatus;
   LServiceInfo: TServiceInfo;
 begin
-  SetLength(FDependents, AServiceInfoCount);
+  SetLength(Result, AServiceInfoCount);
 
   LLoopStatusPointer := AQServicesStatus;
 
-  for LIndex := 0 to High(FDependents) do
+  for LIndex := 0 to High(Result) do
   begin
-    LServiceInfo := FServiceManager.ServiceByName(LLoopStatusPointer^.lpServiceName);;
+    LServiceName := LLoopStatusPointer^.lpServiceName;
+
+    // TODO: Here we have weird issue, asking for Windwos audio dependencies, we get dirrent name (AarSvc) than
+    //       than expected AudioEndpointBuilder for Windows Audio Endpoint Builder, hence True parameter
+    //       it is about, Agent Activation Runtime (AarSvc) Service, maybe it is not true service some how, but possible
+    //       that we have here service which is not in the list
+    LServiceInfo := FServiceManager.ServiceByName(LServiceName, True);
 
     if Assigned(LServiceInfo) then
-      FDependents[LIndex] := LServiceInfo;
+      Result[LIndex] := LServiceInfo;
 
     Inc(LLoopStatusPointer);
+  end;
+end;
+
+function TServiceInfo.Dependents: TArray<TServiceInfo>;
+var
+  LServicesStatus: PEnumServiceStatus;
+  LBytesNeeded: DWORD;
+  LServicesReturned: DWORD;
+begin
+  if GetHandle(SERVICE_ENUMERATE_DEPENDENTS) then
+  try
+    // See how many dependents we have...
+    LServicesStatus := nil;
+    LBytesNeeded := 0;
+    LServicesReturned := 0;
+
+    if EnumDependentServices(FServiceHandle, SERVICE_ACTIVE + SERVICE_INACTIVE, LServicesStatus, 0, LBytesNeeded,
+      LServicesReturned) then
+      Exit;
+
+    if GetLastError <> ERROR_MORE_DATA then
+    begin
+      FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
+      Exit;
+    end;
+
+    // Allocate the buffer needed and fetch all info...
+    GetMem(LServicesStatus, LBytesNeeded);
+    try
+      if not EnumDependentServices(FServiceHandle, SERVICE_ACTIVE + SERVICE_INACTIVE, LServicesStatus, LBytesNeeded,
+        LBytesNeeded, LServicesReturned) then
+      begin
+        FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
+        Exit;
+      end;
+
+      Result := DependenciesToList(LServicesStatus, LServicesReturned);
+    finally
+      FreeMem(LServicesStatus);
+    end;
+  finally
+    CleanupHandle;
   end;
 end;
 
@@ -626,20 +663,6 @@ begin
   CleanupHandle;
 
   inherited Destroy;
-end;
-
-function TServiceInfo.GetDependent(const AIndex: Integer): TServiceInfo;
-begin
-  SearchDependents;
-
-  Result := FDependents[AIndex];
-end;
-
-function TServiceInfo.GetDependentCount: Integer;
-begin
-  SearchDependents;
-
-  Result := Length(FDependents);
 end;
 
 function TServiceInfo.GetHandle(const AAccess: DWORD): Boolean;
@@ -882,56 +905,6 @@ begin
     else
       Exit(True); // supress FixInsight warning
   end;
-end;
-
-// TODO: I think it would be cleaner to get list of depenmdencies as array, and get rid of FDependentsSearched and FDependents
-procedure TServiceInfo.SearchDependents;
-var
-  LServicesStatus: PEnumServiceStatus;
-  LBytesNeeded: DWORD;
-  LServicesReturned: DWORD;
-begin
-  if FDependentsSearched then
-    Exit;
-
-  SetLength(FDependents, 0);
-
-  if GetHandle(SERVICE_ENUMERATE_DEPENDENTS) then
-  try
-    // See how many dependents we have...
-    LServicesStatus := nil;
-    LBytesNeeded := 0;
-    LServicesReturned := 0;
-
-    if EnumDependentServices(FServiceHandle, SERVICE_ACTIVE + SERVICE_INACTIVE, LServicesStatus, 0, LBytesNeeded,
-      LServicesReturned) then
-      Exit;
-
-    if GetLastError <> ERROR_MORE_DATA then
-    begin
-      FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
-      Exit;
-    end;
-
-    // Allocate the buffer needed and fetch all info...
-    GetMem(LServicesStatus, LBytesNeeded);
-    try
-      if not EnumDependentServices(FServiceHandle, SERVICE_ACTIVE + SERVICE_INACTIVE, LServicesStatus, LBytesNeeded,
-        LBytesNeeded, LServicesReturned) then
-      begin
-        FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
-        Exit;
-      end;
-
-      DependenciesToList(LServicesStatus, LServicesReturned);
-    finally
-      FreeMem(LServicesStatus);
-    end;
-  finally
-    CleanupHandle;
-  end;
-
-  FDependentsSearched := True;
 end;
 
 function TServiceInfo.QueryConfig: Boolean;

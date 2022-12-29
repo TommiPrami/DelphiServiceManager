@@ -10,28 +10,31 @@ uses
 type
   TFormFirebierdServiceMain = class(TForm)
     ButtonEnumerateServices: TButton;
+    ButtonEumerateWindowsAudioServiceDependencies: TButton;
     ButtonFixFirebirdService: TButton;
     ButtonQueryFirebird: TButton;
     ButtonStartFirebirdService: TButton;
     ButtonStopFirebirdService: TButton;
+    ButtonTestErrorHandler: TButton;
     MemoLog: TMemo;
     PanelRight: TPanel;
-    ButtonTestErrorHandler: TButton;
     procedure ButtonEnumerateServicesClick(Sender: TObject);
+    procedure ButtonEumerateWindowsAudioServiceDependenciesClick(Sender: TObject);
     procedure ButtonFixFirebirdServiceClick(Sender: TObject);
     procedure ButtonQueryFirebirdClick(Sender: TObject);
     procedure ButtonStartFirebirdServiceClick(Sender: TObject);
     procedure ButtonStopFirebirdServiceClick(Sender: TObject);
+    procedure ButtonTestErrorHandlerClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure ButtonTestErrorHandlerClick(Sender: TObject);
   strict private
     FServciceManager: TServiceManager;
+    function GetLogIndent(const AIndent: Integer): string;
+    function GetServiceNamesString(const AServiceInfo: TServiceInfo): string;
+    function RemoveLineBreaks(const AMessage: string): string;
     procedure ActivateOrRefreshServiceManager;
     procedure Log(const AException: Exception; const AIndent: Integer = 0); overload;
     procedure Log(const AMessage: string; const AIndent: Integer = 0); overload;
-    function GetLogIndent(const AIndent: Integer): string;
-    function RemoveLineBreaks(const AMessage: string): string;
   public
     { Public declarations }
   end;
@@ -72,8 +75,58 @@ begin
     MemoLog.Lines.BeginUpdate;
     try
       for LService in LServices do
-        Log(LService.DisplayName, 1);
-    finally
+      begin
+        Log(GetServiceNamesString(LService), 1);
+      end;
+
+      Log('', 0);
+      Log('Service Count: ' + Length(LServices).ToString, 1);
+   finally
+      MemoLog.Lines.EndUpdate;
+    end;
+  except
+    on E: Exception do
+      Log(E, 2);
+  end;
+
+  Log('');
+end;
+
+procedure TFormFirebierdServiceMain.ButtonEumerateWindowsAudioServiceDependenciesClick(Sender: TObject);
+const
+  WINDOWS_AUDIO_SERVICE_NAME = 'Audiosrv';
+var
+  LDepedencies: TArray<TServiceInfo>;
+  LService: TServiceInfo;
+  LDependantService: TServiceInfo;
+  LDepedencyCount: Integer;
+begin
+  LDepedencyCount := 0;
+
+  try
+    ActivateOrRefreshServiceManager;
+
+    LService := FServciceManager.ServiceByName(WINDOWS_AUDIO_SERVICE_NAME);
+    if not Assigned(LService) then
+      raise Exception.Create('Service not found');
+
+    Log('Eumerate "' + LService.DisplayName + '" service Dependencies...');
+    MemoLog.Lines.BeginUpdate;
+    try
+      LDepedencies := LService.Dependents;
+
+      for LDependantService in LDepedencies do
+      begin
+        if Assigned(LDependantService) then
+        begin
+          Log(GetServiceNamesString(LDependantService), 1);
+          Inc(LDepedencyCount);
+        end;
+      end;
+
+      Log('', 0);
+      Log('Dependent service(s) Count: ' + LDepedencyCount.ToString, 1);
+   finally
       MemoLog.Lines.EndUpdate;
     end;
   except
@@ -276,6 +329,11 @@ begin
     Result := StringOfChar(' ', AIndent * 2) + '- '
   else
     Result := '';
+end;
+
+function TFormFirebierdServiceMain.GetServiceNamesString(const AServiceInfo: TServiceInfo): string;
+begin
+  Result := AServiceInfo.DisplayName + ' (' + AServiceInfo.Name + ')';
 end;
 
 procedure TFormFirebierdServiceMain.Log(const AMessage: string; const AIndent: Integer = 0);

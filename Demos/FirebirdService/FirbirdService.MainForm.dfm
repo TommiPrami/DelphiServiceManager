@@ -16,7 +16,7 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
   object MemoLog: TMemo
     Left = 0
     Top = 0
-    Width = 777
+    Width = 635
     Height = 411
     Align = alClient
     Font.Charset = DEFAULT_CHARSET
@@ -29,9 +29,9 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
     TabOrder = 0
   end
   object PanelRight: TPanel
-    Left = 777
+    Left = 635
     Top = 0
-    Width = 141
+    Width = 283
     Height = 411
     Align = alRight
     BevelOuter = bvNone
@@ -41,7 +41,7 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
       AlignWithMargins = True
       Left = 3
       Top = 3
-      Width = 135
+      Width = 277
       Height = 25
       Align = alTop
       Caption = 'Query Firebird'
@@ -52,7 +52,7 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
       AlignWithMargins = True
       Left = 3
       Top = 34
-      Width = 135
+      Width = 277
       Height = 25
       Align = alTop
       Caption = 'Enumerate services'
@@ -63,7 +63,7 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
       AlignWithMargins = True
       Left = 3
       Top = 65
-      Width = 135
+      Width = 277
       Height = 25
       Align = alTop
       Caption = 'Start Firebird service'
@@ -74,7 +74,7 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
       AlignWithMargins = True
       Left = 3
       Top = 96
-      Width = 135
+      Width = 277
       Height = 25
       Align = alTop
       Caption = 'Stop Firebird service'
@@ -85,7 +85,7 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
       AlignWithMargins = True
       Left = 3
       Top = 127
-      Width = 135
+      Width = 277
       Height = 25
       Align = alTop
       Caption = 'Fix Firebird service'
@@ -96,12 +96,23 @@ object FormFirebierdServiceMain: TFormFirebierdServiceMain
       AlignWithMargins = True
       Left = 3
       Top = 158
-      Width = 135
+      Width = 277
       Height = 25
       Align = alTop
       Caption = 'Test error handler'
       TabOrder = 5
       OnClick = ButtonTestErrorHandlerClick
+    end
+    object ButtonEumerateWindowsAudioServiceDependencies: TButton
+      AlignWithMargins = True
+      Left = 3
+      Top = 189
+      Width = 277
+      Height = 25
+      Align = alTop
+      Caption = 'Eumerate Windows Audio  Dependencies'
+      TabOrder = 6
+      OnClick = ButtonEumerateWindowsAudioServiceDependenciesClick
     end
   end
 end
