@@ -67,8 +67,7 @@ type
     constructor Create(const AParentServiceManager: TServiceManager);
     destructor Destroy; override;
 
-    { Get array of services that depent on this service, might return nil items, at least for now }
-    // TODO: Handle nil item issue some way
+    { Get array of services that depent on this service }
     function Dependents: TArray<TServiceInfo>;
     { Action: Pause a running service. }
     function Pause(const AWait: Boolean = True): Boolean;
@@ -137,6 +136,7 @@ type
     function Unlock: Boolean;
     procedure HandleError(const AErrorCode: Integer; const AForceException: Boolean = False);
     procedure ResetLastError;
+    procedure SortArray(var AServiceInfoArray: TArray<TServiceInfo>);
   public
     constructor Create;
     destructor Destroy; override;
@@ -386,12 +386,7 @@ function TServiceManager.GetServicesByDisplayName: TArray<TServiceInfo>;
 begin
   Result := FServicesList.ToArray;
 
-  TArray.Sort<TServiceInfo>(Result, TDelegatedComparer<TServiceInfo>.Construct(
-    function(const ALeft, ARight:TServiceInfo): Integer
-    begin
-      Result := TComparer<string>.Default.Compare(ALeft.DisplayName, ARight.DisplayName);
-    end)
-  );
+  SortArray(Result);
 end;
 
 procedure TServiceManager.HandleError(const AErrorCode: Integer; const AForceException: Boolean = False);
@@ -462,6 +457,16 @@ begin
   end;
 
   FMachineName := AMachineName;
+end;
+
+procedure TServiceManager.SortArray(var AServiceInfoArray: TArray<TServiceInfo>);
+begin
+  TArray.Sort<TServiceInfo>(AServiceInfoArray, TDelegatedComparer<TServiceInfo>.Construct(
+    function(const ALeft, ARight:TServiceInfo): Integer
+    begin
+      Result := TComparer<string>.Default.Compare(ALeft.DisplayName, ARight.DisplayName);
+    end)
+  );
 end;
 
 (*
@@ -594,25 +599,36 @@ var
   LIndex: Integer;
   LLoopStatusPointer: PEnumServiceStatus;
   LServiceInfo: TServiceInfo;
+  LDependentSerevices: TList<TServiceInfo>;
 begin
-  SetLength(Result, AServiceInfoCount);
+  Result := [];
 
-  LLoopStatusPointer := AQServicesStatus;
+  // SetLength(Result, AServiceInfoCount);
+  LDependentSerevices := TList<TServiceInfo>.Create;
+  try
+    LLoopStatusPointer := AQServicesStatus;
 
-  for LIndex := 0 to High(Result) do
-  begin
-    LServiceName := LLoopStatusPointer^.lpServiceName;
+    for LIndex := 0 to AServiceInfoCount - 1 do
+    begin
+      LServiceName := LLoopStatusPointer^.lpServiceName;
 
-    // TODO: Here we have weird issue, asking for Windwos audio dependencies, we get dirrent name (AarSvc) than
-    //       than expected AudioEndpointBuilder for Windows Audio Endpoint Builder, hence True parameter
-    //       it is about, Agent Activation Runtime (AarSvc) Service, maybe it is not true service some how, but possible
-    //       that we have here service which is not in the list
-    LServiceInfo := FServiceManager.ServiceByName(LServiceName, True);
+      // TODO: Here we have weird issue, asking for Windwos audio dependencies, we get dirrent name (AarSvc) than
+      //       than expected AudioEndpointBuilder for Windows Audio Endpoint Builder, hence True parameter
+      //       it is about, Agent Activation Runtime (AarSvc) Service, maybe it is not true service some how, but possible
+      //       that we have here service which is not in the list
+      LServiceInfo := FServiceManager.ServiceByName(LServiceName, True);
 
-    if Assigned(LServiceInfo) then
-      Result[LIndex] := LServiceInfo;
+      if Assigned(LServiceInfo) then
+        LDependentSerevices.Add(LServiceInfo);
 
-    Inc(LLoopStatusPointer);
+      Inc(LLoopStatusPointer);
+    end;
+
+    Result := LDependentSerevices.ToArray;
+
+    FServiceManager.SortArray(Result);
+  finally
+    LDependentSerevices.Free;
   end;
 end;
 
