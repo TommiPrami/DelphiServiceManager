@@ -111,6 +111,7 @@
         <DCCReference Include="FirbirdService.MainForm.pas">
             <Form>FormFirebierdServiceMain</Form>
         </DCCReference>
+        <DCCReference Include="..\..\Windows.ServiceManager.pas"/>
         <DCCReference Include="..\..\Windows.ServiceManager.Types.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
