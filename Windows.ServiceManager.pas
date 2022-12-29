@@ -644,6 +644,12 @@ end;
 
 function TServiceInfo.GetHandle(const AAccess: DWORD): Boolean;
 begin
+  { TODO: here is a bug or missing sanity check, I think.
+
+          Should check the AAccess, error if hadle allocated but Access
+          is different than previously used. Code logic/structure most likely wrong.
+
+          all operations should be nested bet ween GetHandle try..finally CleanupHandle }
   if FServiceHandle <> 0 then
     Exit(True);
 
@@ -878,6 +884,7 @@ begin
   end;
 end;
 
+// TODO: I think it would be cleaner to get list of depenmdencies as array, and get rid of FDependentsSearched and FDependents
 procedure TServiceInfo.SearchDependents;
 var
   LServicesStatus: PEnumServiceStatus;
@@ -887,10 +894,9 @@ begin
   if FDependentsSearched then
     Exit;
 
-  // No dependents found...
   SetLength(FDependents, 0);
-  // We need a handle to the service to do any good...
-  GetHandle(SERVICE_ENUMERATE_DEPENDENTS);
+
+  if GetHandle(SERVICE_ENUMERATE_DEPENDENTS) then
   try
     // See how many dependents we have...
     LServicesStatus := nil;
