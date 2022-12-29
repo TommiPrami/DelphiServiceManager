@@ -888,7 +888,7 @@ begin
     Exit;
 
   // No dependents found...
-  SetLength(FDependents,0);
+  SetLength(FDependents, 0);
   // We need a handle to the service to do any good...
   GetHandle(SERVICE_ENUMERATE_DEPENDENTS);
   try
