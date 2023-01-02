@@ -611,14 +611,19 @@ begin
     begin
       LServiceName := LLoopStatusPointer^.lpServiceName;
 
-      // TODO: Here we have weird issue, asking for Windwos audio dependencies, we get dirrent name (AarSvc) than
-      //       than expected AudioEndpointBuilder for Windows Audio Endpoint Builder, hence True parameter.
-      //       This is about, Agent Activation Runtime (AarSvc) Service, maybe it is not true service some how,
-      //       but possible, did not gig up to it, services manager shows 3 dependencies, two of them is returned
-      //       here as expected.
-      //
-      //       So we need to have the True paramter, that tere might bi service name that could not be found,
-      //       until fixed, if possible
+      { TODO: Here we have weird issue.
+
+        Getting dependencies of "Windows audio" -service.
+        we get dirrent name (AarSvc) than than expected AudioEndpointBuilder for the
+        "Windows Audio Endpoint Builder" - service, hence True parameter for ServiceByName call.
+
+        This is about, Agent Activation Runtime (AarSvc) Service, maybe it is not true service some how,
+        but possible, did not dig up info. Services manager shows 3 dependencies, two of them is returned
+        here as expected.
+
+        So we need to have the True parameter at ServiceByName call, that there might be service name
+        that could not be found. Until fixed, if even possible.
+      }
       LServiceInfo := FServiceManager.ServiceByName(LServiceName, True);
 
       if Assigned(LServiceInfo) then
