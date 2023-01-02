@@ -52,25 +52,6 @@ type
                      ssManual,
                      ssDisabled);
 
-const
-  RAISE_LAST_OS_ERROR = -1;
-  ErrorInfoArray: array[0..12] of TErrorInfo =
-    (
-      (ErrorCode: 1; ExceptionClass: Exception; ErrorMessage: 'BuildServicesList only works when Active.'),
-      (ErrorCode: 2; ExceptionClass: EServiceNotFound; ErrorMessage: 'Service not found.'),
-      (ErrorCode: 3; ExceptionClass: EOSNotSupported; ErrorMessage: 'This program only works on Windows NT, 2000, XP or later.'),
-      (ErrorCode: 4; ExceptionClass: EOperationNotAllowedWhileActive; ErrorMessage: 'Cannot change machine name while Active.'),
-      (ErrorCode: 5; ExceptionClass: ELockingNotAllowed; ErrorMessage: 'Locking of the service manager not allowed.'),
-      (ErrorCode: 6; ExceptionClass: EOperationNotAllowedWhileActive; ErrorMessage: 'Cannot change allow locking while active.'),
-      (ErrorCode: 7; ExceptionClass: EServiceStateUnkown; ErrorMessage: 'Service State unknown.'),
-      (ErrorCode: 8; ExceptionClass: EServiceCannotBeContinued; ErrorMessage: 'Service cannot be continued.'),
-      (ErrorCode: 9; ExceptionClass: EServiceCannotBeContinued; ErrorMessage: 'Service cannot be paused.'),
-      (ErrorCode: 10; ExceptionClass: EServiceCannotBeStopped; ErrorMessage: 'Service cannot be Stopped.'),
-      (ErrorCode: 11; ExceptionClass: EServiceDidNotRespond; ErrorMessage: 'Service did not react within timeframe given.'),
-      (ErrorCode: 12; ExceptionClass: EServiceServiceStartTypeUnknown; ErrorMessage: 'Service Start Type unknown.'),
-      (ErrorCode: 13; ExceptionClass: ECannotSetTransitionalState; ErrorMessage: 'Cannot set a transitional state.')
-   );
-
 
 implementation
 

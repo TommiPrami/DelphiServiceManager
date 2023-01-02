@@ -17,8 +17,7 @@ unit Windows.ServiceManager;
 
 interface
 
-uses
-  Winapi.Windows, Winapi.Winsvc, System.Generics.Collections, System.SysUtils, Windows.ServiceManager.Types;
+uses  Winapi.Windows, Winapi.Winsvc, System.Generics.Collections, System.SysUtils, Windows.ServiceManager.Types;
 
 type
   // Forward declaration of Service manager class
@@ -187,7 +186,7 @@ type
 implementation
 
 uses
-  System.Generics.Defaults, System.SysConst;
+  System.Generics.Defaults, System.SysConst, Windows.ServiceManager.Consts;
 
 function ServiceStateToString(const AServiceState: TServiceState): string;
 begin
@@ -217,7 +216,7 @@ begin
 
   if not Active then
   begin
-    HandleError(1);
+    HandleError(SERVICELIST_NOT_ACTIVE);
     Exit;
   end;
 
@@ -236,7 +235,7 @@ begin
 
   if GetLastError <> ERROR_MORE_DATA then
   begin
-    HandleError(RAISE_LAST_OS_ERROR);
+    HandleError(LAST_OS_ERROR);
     Exit;
   end;
 
@@ -373,7 +372,7 @@ begin
     Result := nil;
 
     if not AAllowUnkown then
-      HandleError(2);
+      HandleError(SERVICE_NOT_FOUND);
   end;
 end;
 
@@ -396,7 +395,7 @@ var
 begin
   FLastErrorCode := AErrorCode;
 
-  if FLastErrorCode = RAISE_LAST_OS_ERROR then
+  if FLastErrorCode = LAST_OS_ERROR then
   begin
     FLastSystemErrorCode := GetLastError;
     if FLastSystemErrorCode <> 0 then
@@ -452,7 +451,7 @@ procedure TServiceManager.SetMachineName(const AMachineName: string);
 begin
   if Active then
   begin
-    HandleError(4, True);
+    HandleError(IS_ACTIVE);
     Exit;
   end;
 
@@ -481,7 +480,7 @@ function TServiceManager.Lock: Boolean;
 begin
   if not FAllowLocking then
   begin
-    HandleError(5);
+    HandleError(LOCKING_NOT_ALLOWED);
     Exit(False);
   end;
 
@@ -492,7 +491,7 @@ begin
 
   if FLockHandle = nil then
   begin
-    HandleError(RAISE_LAST_OS_ERROR);
+    HandleError(LAST_OS_ERROR);
     Exit;
   end
   else
@@ -515,13 +514,13 @@ begin
 
   if not GetVersionEx(LVersionInfo) then
   begin
-    HandleError(RAISE_LAST_OS_ERROR);
+    HandleError(LAST_OS_ERROR);
     Exit;
   end;
 
   if LVersionInfo.dwPlatformId <> VER_PLATFORM_WIN32_NT then
   begin
-    HandleError(3);
+    HandleError(OS_NOT_CUPPOORTED);
     Exit;
   end;
 
@@ -533,7 +532,7 @@ begin
   FManagerHandle := OpenSCManager(PChar(FMachineName), nil, LDesiredAccess);
   if not Active then
   begin
-    HandleError(RAISE_LAST_OS_ERROR);
+    HandleError(LAST_OS_ERROR);
     Exit;
   end;
 
@@ -552,7 +551,7 @@ begin
   // Unlock...
   if not UnlockServiceDatabase(FLockHandle) then
   begin
-    HandleError(RAISE_LAST_OS_ERROR);
+    HandleError(LAST_OS_ERROR);
     Exit;
   end;
 
@@ -564,7 +563,7 @@ procedure TServiceManager.SetAllowLocking(const AValue: Boolean);
 begin
   if Active then
   begin
-    HandleError(6, True);
+    HandleError(OPERATION_NOT_ALLOWED_WHILE_ACTIVE);
     Exit;
   end;
 
@@ -657,7 +656,7 @@ begin
 
     if GetLastError <> ERROR_MORE_DATA then
     begin
-      FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
+      FServiceManager.HandleError(LAST_OS_ERROR);
       Exit;
     end;
 
@@ -667,7 +666,7 @@ begin
       if not EnumDependentServices(FServiceHandle, SERVICE_ACTIVE + SERVICE_INACTIVE, LServicesStatus, LBytesNeeded,
         LBytesNeeded, LServicesReturned) then
       begin
-        FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
+        FServiceManager.HandleError(LAST_OS_ERROR);
         Exit;
       end;
 
@@ -706,7 +705,7 @@ begin
 
   if FServiceHandle = 0 then
   begin
-    FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+    FServiceManager.HandleError(LAST_OS_ERROR);
     Exit;
   end
   else
@@ -728,7 +727,7 @@ begin
     SERVICE_PAUSED:           Result := ssPaused;
     else
     begin
-      FServiceManager.HandleError(7, True);
+      FServiceManager.HandleError(SERVICE_STATE_UNKNOWN, True);
       Result := ssStopped; // Make compiler happy
     end;
   end;
@@ -745,7 +744,7 @@ begin
   begin
     if not QueryServiceStatus(FServiceHandle, LStatus) then
     begin
-      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      FServiceManager.HandleError(LAST_OS_ERROR);
       Exit;
     end;
   end
@@ -757,7 +756,7 @@ begin
     try
       if not QueryServiceStatus(FServiceHandle, LStatus) then
       begin
-        FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+        FServiceManager.HandleError(LAST_OS_ERROR);
         Exit;
       end;
     finally
@@ -779,13 +778,13 @@ begin
   try
     if not (saPauseContinue in ServiceAccepts) then
     begin
-      FServiceManager.HandleError(8);
+      FServiceManager.HandleError(SERVICE_CANNOT_CONTINUE);
       Exit;
     end;
 
     if not ControlService(FServiceHandle, SERVICE_CONTROL_CONTINUE, LStatus) then
     begin
-      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      FServiceManager.HandleError(LAST_OS_ERROR);
       Exit;
     end;
 
@@ -809,13 +808,13 @@ begin
   try
     if not (saPauseContinue in ServiceAccepts) then
     begin
-      FServiceManager.HandleError(9);
+      FServiceManager.HandleError(SERVICE_CANNOT_PAUSE);
       Exit;
     end;
 
     if not ControlService(FServiceHandle,SERVICE_CONTROL_PAUSE, LStatus) then
     begin
-      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      FServiceManager.HandleError(LAST_OS_ERROR);
       Exit;
     end;
 
@@ -840,7 +839,7 @@ begin
     LServiceArgumentVectors := nil;
     if not StartService(FServiceHandle, 0, LServiceArgumentVectors) then
     begin
-      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      FServiceManager.HandleError(LAST_OS_ERROR);
       Exit;
     end;
 
@@ -864,13 +863,13 @@ begin
   try
     if not (saStop in ServiceAccepts) then
     begin
-      FServiceManager.HandleError(10);
+      FServiceManager.HandleError(SERVICE_CANNOT_STOP);
       Exit;
     end;
 
     if not ControlService(FServiceHandle,SERVICE_CONTROL_STOP, LStatus) then
     begin
-      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      FServiceManager.HandleError(LAST_OS_ERROR);
       Exit;
     end;
 
@@ -909,7 +908,7 @@ begin
 
       if FServiceStatus.dwCheckPoint <> LOldCheckPoint then
       begin
-        FServiceManager.HandleError(11);
+        FServiceManager.HandleError(SERVICE_TIMEOUT);
         Exit(False);
       end;
     end;
@@ -943,7 +942,7 @@ begin
 
     if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
     begin
-      FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+      FServiceManager.HandleError(LAST_OS_ERROR);
       Exit;
     end;
 
@@ -952,7 +951,7 @@ begin
       // Perform the query...
       if not QueryServiceConfig(FServiceHandle,LBuffer,LBytesNeeded,LBytesNeeded) then
       begin
-        FServiceManager.HandleError(RAISE_LAST_OS_ERROR);
+        FServiceManager.HandleError(LAST_OS_ERROR);
         Exit;
       end;
 
@@ -967,7 +966,7 @@ begin
         SERVICE_DISABLED:      FStartType := ssDisabled;
         else
         begin
-          FServiceManager.HandleError(12);
+          FServiceManager.HandleError(SERVICE_STARTTYPE_UNKNOWN);
           Exit
         end;
       end;
@@ -1045,7 +1044,7 @@ begin
     Query;
 
   if not WaitForPendingServiceState(GetState) then
-    FServiceManager.HandleError(11, True);
+    FServiceManager.HandleError(SERVICE_TIMEOUT);
 
   LOldState := GetState;
   // See what we need to do...
@@ -1067,14 +1066,16 @@ begin
               Pause(True); // some services do not support pause/continue!
             except
               Stop(True);
-              raise;
+
+              if FServiceManager.RaiseExceptions then
+                raise;
             end;
           end;
         ssRunning: Pause(True);
       end;
     else
     begin
-      FServiceManager.HandleError(13, True);
+      FServiceManager.HandleError(SERVICE_CANNOT_SET_STATE, True);
       Exit;
     end;
   end;
@@ -1100,7 +1101,7 @@ begin
       if not ChangeServiceConfig(FServiceHandle, SERVICE_NO_CHANGE, NEW_START_TYPES[AValue], SERVICE_NO_CHANGE,
         nil, nil, nil, nil, nil, nil, nil) then
       begin
-        FServiceManager.HandleError(RAISE_LAST_OS_ERROR, True);
+        FServiceManager.HandleError(LAST_OS_ERROR);
         Exit;
       end;
 
