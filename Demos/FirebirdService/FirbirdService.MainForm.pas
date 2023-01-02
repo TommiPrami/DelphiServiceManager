@@ -272,6 +272,7 @@ var
 begin
   Log('Testing error handler...');
 
+  Log('Exxception handling On', 1);
   LServciceManager := TServiceManager.Create;
   try
     try
@@ -290,6 +291,7 @@ begin
     if not LExceptionRaised or (LServciceManager.LastErrorCode = 0) or (LServciceManager.LAstErrorMessage.IsEmpty) then
       raise Exception.Create('Error handler did not work');
 
+    Log('Exxception handling Off', 1);
     try
       LExceptionRaised := False;
       LServciceManager.RaiseExceptions := False;
