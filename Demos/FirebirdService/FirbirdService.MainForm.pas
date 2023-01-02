@@ -291,7 +291,7 @@ begin
     if not LExceptionRaised or (LServciceManager.LastErrorCode = 0) or (LServciceManager.LAstErrorMessage.IsEmpty) then
       raise Exception.Create('Error handler did not work');
 
-    Log('Do  not raise Exceptions', 1);
+    Log('Do not raise Exceptions', 1);
     try
       LExceptionRaised := False;
       LServciceManager.RaiseExceptions := False;
