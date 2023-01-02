@@ -308,7 +308,7 @@ begin
     if LExceptionRaised or (LServciceManager.LastErrorCode = 0) or (LServciceManager.LAstErrorMessage.IsEmpty) then
       raise Exception.Create('Error handler did not work')
     else
-      Log(LServciceManager.LAstErrorMessage, 2);
+      Log(LServciceManager.LastErrorMessage, 2);
   finally
     LServciceManager.Free;
   end;
