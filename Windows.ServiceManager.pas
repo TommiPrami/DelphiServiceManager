@@ -478,13 +478,14 @@ end;
 
 function TServiceManager.Lock: Boolean;
 begin
+  Result := False;
+
   if not FAllowLocking then
   begin
     HandleError(LOCKING_NOT_ALLOWED);
-    Exit(False);
+    Exit;
   end;
 
-  Result := False;
   ResetLastError;
 
   FLockHandle := LockServiceDatabase(FManagerHandle);
@@ -695,10 +696,12 @@ function TServiceInfo.GetHandle(const AAccess: DWORD): Boolean;
 begin
   { TODO: here is a bug or missing sanity check, I think.
 
-          Should check the AAccess, error if hadle allocated but Access
-          is different than previously used. Code logic/structure most likely wrong.
+          Should check the AAccess, error if handle allocated but Access
+          is different than previously used. Then Code logic/structure most likely wrong.
 
-          all operations should be nested bet ween GetHandle try..finally CleanupHandle }
+          All operations should be nested between GetHandle try..finally CleanupHandle, or have same
+          Access needs
+  }
   if FServiceHandle <> 0 then
     Exit(True);
 
@@ -909,9 +912,8 @@ begin
       Query;
 
       if AState = FServiceStatus.dwCurrentState then
-        Break;
-
-      if FServiceStatus.dwCheckPoint <> LOldCheckPoint then
+        Break
+      else if FServiceStatus.dwCheckPoint <> LOldCheckPoint then
       begin
         FServiceManager.HandleError(SERVICE_TIMEOUT);
         Exit(False);
@@ -951,10 +953,10 @@ begin
       Exit;
     end;
 
-    GetMem(LBuffer,LBytesNeeded);
+    GetMem(LBuffer, LBytesNeeded);
     try
       // Perform the query...
-      if not QueryServiceConfig(FServiceHandle,LBuffer,LBytesNeeded,LBytesNeeded) then
+      if not QueryServiceConfig(FServiceHandle, LBuffer, LBytesNeeded, LBytesNeeded) then
       begin
         FServiceManager.HandleError(LAST_OS_ERROR);
         Exit;
@@ -966,9 +968,9 @@ begin
       FInteractive := (LBuffer^.dwServiceType and SERVICE_INTERACTIVE_PROCESS) = SERVICE_INTERACTIVE_PROCESS;
 
       case LBuffer^.dwStartType of
-        SERVICE_AUTO_START:    FStartType := ssAutomatic;
-        SERVICE_DEMAND_START:  FStartType := ssManual;
-        SERVICE_DISABLED:      FStartType := ssDisabled;
+        SERVICE_AUTO_START: FStartType := ssAutomatic;
+        SERVICE_DEMAND_START: FStartType := ssManual;
+        SERVICE_DISABLED: FStartType := ssDisabled;
         else
         begin
           FServiceManager.HandleError(SERVICE_STARTTYPE_UNKNOWN);
