@@ -937,7 +937,7 @@ end;
 
 function TServiceInfo.QueryConfig: Boolean;
 var
-  LBuffer: LPQUERY_SERVICE_CONFIG;
+  LServiceConfig: LPQUERY_SERVICE_CONFIG;
   LBytesNeeded: DWORD;
 begin
   Result := False;
@@ -953,21 +953,21 @@ begin
       Exit;
     end;
 
-    GetMem(LBuffer, LBytesNeeded);
+    GetMem(LServiceConfig, LBytesNeeded);
     try
       // Perform the query...
-      if not QueryServiceConfig(FServiceHandle, LBuffer, LBytesNeeded, LBytesNeeded) then
+      if not QueryServiceConfig(FServiceHandle, LServiceConfig, LBytesNeeded, LBytesNeeded) then
       begin
         FServiceManager.HandleError(LAST_OS_ERROR);
         Exit;
       end;
 
       // Analyze the query...
-      Assert(LBuffer^.dwServiceType and SERVICE_WIN32 <> 0); // It must be a WIN32 service
-      FOwnProcess := (LBuffer^.dwServiceType and SERVICE_WIN32) = SERVICE_WIN32_OWN_PROCESS;
-      FInteractive := (LBuffer^.dwServiceType and SERVICE_INTERACTIVE_PROCESS) = SERVICE_INTERACTIVE_PROCESS;
+      Assert(LServiceConfig^.dwServiceType and SERVICE_WIN32 <> 0); // It must be a WIN32 service
+      FOwnProcess := (LServiceConfig^.dwServiceType and SERVICE_WIN32) = SERVICE_WIN32_OWN_PROCESS;
+      FInteractive := (LServiceConfig^.dwServiceType and SERVICE_INTERACTIVE_PROCESS) = SERVICE_INTERACTIVE_PROCESS;
 
-      case LBuffer^.dwStartType of
+      case LServiceConfig^.dwStartType of
         SERVICE_AUTO_START: FStartType := ssAutomatic;
         SERVICE_DEMAND_START: FStartType := ssManual;
         SERVICE_DISABLED: FStartType := ssDisabled;
@@ -978,13 +978,13 @@ begin
         end;
       end;
 
-      FBinaryPathName := LBuffer^.lpBinaryPathName;
-      FUsername := LBuffer^.lpServiceStartName;
+      FBinaryPathName := LServiceConfig^.lpBinaryPathName;
+      FUsername := LServiceConfig^.lpServiceStartName;
       FConfigQueried := True;
 
       Result := True;
     finally
-      FreeMem(LBuffer);
+      FreeMem(LServiceConfig);
     end;
   finally
     CleanupHandle;
