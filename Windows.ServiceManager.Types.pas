@@ -7,7 +7,8 @@ uses
 
 type
   ECustomServiceManagerException = class(Exception);
-  EIndexOutOfBounds = class(ECustomServiceManagerException);
+
+  ENotActive = class(ECustomServiceManagerException);
   EServiceNotFound = class(ECustomServiceManagerException);
   EOSNotSupported = class(ECustomServiceManagerException);
   EOperationNotAllowedWhileActive = class(ECustomServiceManagerException);

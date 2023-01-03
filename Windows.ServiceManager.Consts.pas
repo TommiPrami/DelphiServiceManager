@@ -3,7 +3,7 @@
 interface
 
 uses
-  System.SysUtils, Windows.ServiceManager.Types;
+  Windows.ServiceManager.Types;
 
 const
   // OS Error
@@ -25,7 +25,7 @@ const
 
   ErrorInfoArray: array[0..12] of TErrorInfo =
     (
-      (ErrorCode: SERVICELIST_NOT_ACTIVE; ExceptionClass: Exception; ErrorMessage: 'BuildServicesList only works when Active.'),
+      (ErrorCode: SERVICELIST_NOT_ACTIVE; ExceptionClass: ENotActive; ErrorMessage: 'BuildServicesList only works when Active.'),
       (ErrorCode: SERVICE_NOT_FOUND; ExceptionClass: EServiceNotFound; ErrorMessage: 'Service not found.'),
       (ErrorCode: OS_NOT_CUPPOORTED; ExceptionClass: EOSNotSupported; ErrorMessage: 'This program only works on Windows NT, 2000, XP or later.'),
       (ErrorCode: IS_ACTIVE; ExceptionClass: EOperationNotAllowedWhileActive; ErrorMessage: 'Cannot change machine name while Active.'),
@@ -39,8 +39,6 @@ const
       (ErrorCode: SERVICE_STARTTYPE_UNKNOWN; ExceptionClass: EServiceServiceStartTypeUnknown; ErrorMessage: 'Service Start Type unknown.'),
       (ErrorCode: SERVICE_CANNOT_SET_STATE; ExceptionClass: ECannotSetTransitionalState; ErrorMessage: 'Cannot set a transitional state.')
    );
-
-
 
 implementation
 
