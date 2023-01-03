@@ -50,11 +50,7 @@ type
     procedure SetState(const AServiceState: TServiceState);
     function GetServiceAccepts: TServiceAccepts;
     procedure SetStartType(const AValue: TServiceStartup);
-  protected
-    { Cleanup the handle created with @link(GetHandle). }
     procedure CleanupHandle;
-    { Open a handle to the service with the given access rights.
-      This handle can be deleted via @link(CleanupHandle). }
     function GetHandle(const AAccess: DWORD): Boolean;
     { Query the current status of this service }
     function Query: Boolean;
