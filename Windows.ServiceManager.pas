@@ -719,13 +719,13 @@ begin
     Query;
 
   case FServiceStatus.dwCurrentState of
-    SERVICE_STOPPED:          Result := ssStopped;
-    SERVICE_START_PENDING:    Result := ssStartPending;
-    SERVICE_STOP_PENDING:     Result := ssStopPending;
-    SERVICE_RUNNING:          Result := ssRunning;
+    SERVICE_STOPPED: Result := ssStopped;
+    SERVICE_START_PENDING: Result := ssStartPending;
+    SERVICE_STOP_PENDING: Result := ssStopPending;
+    SERVICE_RUNNING: Result := ssRunning;
     SERVICE_CONTINUE_PENDING: Result := ssContinuePending;
-    SERVICE_PAUSE_PENDING:    Result := ssPausePending;
-    SERVICE_PAUSED:           Result := ssPaused;
+    SERVICE_PAUSE_PENDING: Result := ssPausePending;
+    SERVICE_PAUSED: Result := ssPaused;
     else
     begin
       FServiceManager.HandleError(SERVICE_STATE_UNKNOWN, True);
