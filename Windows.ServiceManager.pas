@@ -17,7 +17,8 @@ unit Windows.ServiceManager;
 
 interface
 
-uses  Winapi.Windows, Winapi.Winsvc, System.Generics.Collections, System.SysUtils, Windows.ServiceManager.Types;
+uses
+  Winapi.Windows, Winapi.Winsvc, System.Generics.Collections, System.SysUtils, Windows.ServiceManager.Types;
 
 type
   // Forward declaration of Service manager class
