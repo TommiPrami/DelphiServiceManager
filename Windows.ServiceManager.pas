@@ -701,19 +701,16 @@ begin
   if FServiceHandle <> 0 then
     Exit(True);
 
-  Result := False;
-
   FServiceManager.ResetLastError;
 
   FServiceHandle := OpenService(FServiceManager.GetManagerHandle, PChar(FServiceName), AAccess);
 
-  if FServiceHandle = 0 then
+  Result := FServiceHandle > 0;
+  if not Result then
   begin
     FServiceManager.HandleError(LAST_OS_ERROR);
     Exit;
   end
-  else
-    Result := True;
 end;
 
 function TServiceInfo.GetState: TServiceState;
