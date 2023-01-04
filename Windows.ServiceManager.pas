@@ -40,6 +40,9 @@ type
     FInteractive: Boolean;
     FStartType: TServiceStartup;
     FBinaryPathName: string;
+    FPath: string;
+    FFileName: string;
+    FCommandLine: string;
     FUserName: string;
     function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer): TArray<TServiceInfo>;
     function GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
@@ -54,12 +57,17 @@ type
     procedure SetStartType(const AValue: TServiceStartup);
     procedure CleanupHandle;
     function GetHandle(const AAccess: DWORD): Boolean;
+    procedure ParseBinaryPath;
     { Query the current status of this service }
     function Query: Boolean;
     { Wait for a given status of this service... }
     function WaitFor(const AState: DWORD): Boolean;
     { Fetch the configuration information }
     function QueryConfig: Boolean;
+    function GetCommandLine: string;
+    function GetFileName: string;
+    function GetPath: string;
+    procedure RefreshIfNeeded;
   public
     constructor Create(const AParentServiceManager: TServiceManager);
     destructor Destroy; override;
@@ -95,6 +103,9 @@ type
     property StartType: TServiceStartup read GetStartType write SetStartType;
     { Path to the binary that implements the service. }
     property BinaryPathName: string read GetBinaryPathName;
+    property Path: string read GetPath;
+    property FileName: string read GetFileName;
+    property CommandLine: string read GetCommandLine;
     { See what controls the service accepts. }
     property ServiceAccepts: TServiceAccepts read GetServiceAccepts;
     { Index in ServiceManagers list }
@@ -812,6 +823,35 @@ begin
   end;
 end;
 
+procedure TServiceInfo.ParseBinaryPath;
+var
+  LCommanlineStart: Integer;
+begin
+  FPath := '';
+  FFileName := '';
+  FCommandLine := '';
+
+  if FBinaryPathName <> '' then
+  begin
+    LCommanlineStart := FBinaryPathName.IndexOf('" ');
+    if LCommanlineStart < 0 then
+      LCommanlineStart := FBinaryPathName.IndexOf(' ');
+
+    if LCommanlineStart > 0 then
+    begin
+      FCommandLine := FBinaryPathName.Substring(LCommanlineStart + 2);
+      FFileName := FBinaryPathName.Substring(0, LCommanlineStart + 1);
+    end
+    else
+      FFileName := FBinaryPathName;
+
+    FFileName := FFileName.DeQuotedString('"');
+
+    FPath := ExtractFilePath(FFileName);
+    FFileName := ExtractFileName(FFileName);
+  end;
+end;
+
 function TServiceInfo.Pause(const AWait: Boolean = True): Boolean;
 var
   LStatus: TServiceStatus;
@@ -977,7 +1017,7 @@ begin
         Exit;
 
       FBinaryPathName := LServiceConfig^.lpBinaryPathName;
-      //TODO: Parse Path and filename and Commandline, especially path and filename would be usefull to have on hand
+      ParseBinaryPath;
 
       FUsername := LServiceConfig^.lpServiceStartName;
       FConfigQueried := True;
@@ -991,36 +1031,59 @@ begin
   end;
 end;
 
-function TServiceInfo.GetOwnProcess: Boolean;
+procedure TServiceInfo.RefreshIfNeeded;
 begin
   if FLive or not FConfigQueried then
     QueryConfig;
+end;
+
+function TServiceInfo.GetOwnProcess: Boolean;
+begin
+  RefreshIfNeeded;
 
   Result := FOwnProcess;
 end;
 
+function TServiceInfo.GetPath: string;
+begin
+  RefreshIfNeeded;
+
+  Result := FPath;
+end;
+
 function TServiceInfo.GetInteractive: Boolean;
 begin
-  if FLive or not FConfigQueried then
-    QueryConfig;
+  RefreshIfNeeded;
 
   Result := FInteractive;
 end;
 
 function TServiceInfo.GetStartType: TServiceStartup;
 begin
-  if FLive or not FConfigQueried then
-    QueryConfig;
+  RefreshIfNeeded;
 
   Result := FStartType;
 end;
 
 function TServiceInfo.GetBinaryPathName: string;
 begin
-  if FLive or not FConfigQueried then
-    QueryConfig;
+  RefreshIfNeeded;
 
   Result := FBinaryPathName;
+end;
+
+function TServiceInfo.GetCommandLine: string;
+begin
+  RefreshIfNeeded;
+
+  Result := FCommandLine;
+end;
+
+function TServiceInfo.GetFileName: string;
+begin
+  RefreshIfNeeded;
+
+  Result := FFileName;
 end;
 
 function TServiceInfo.GetServiceAccepts: TServiceAccepts;

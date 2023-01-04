@@ -199,8 +199,9 @@ begin
     LServiceRunning := LFirebirdService.State = ssRunning;
     Log(IfThen(LServiceRunning, 'Firebird Service Runnin', 'Firebird Service NOT Runnin'), 1);
 
-    if LServiceRunning then
-      Log('Service located at: "' + LFirebirdService.BinaryPathName + '"', 1);
+    Log('Path: "' + LFirebirdService.Path + '"', 2);
+    Log('File name: "' + LFirebirdService.FileName + '"', 2);
+    Log('Command line: "' + LFirebirdService.CommandLine + '"', 2);
   except
     on E: Exception do
       Log(E, 2);
