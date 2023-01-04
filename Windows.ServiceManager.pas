@@ -42,6 +42,7 @@ type
     FBinaryPathName: string;
     FUserName: string;
     function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer): TArray<TServiceInfo>;
+    function GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
     function GetState: TServiceState;
     function GetOwnProcess: Boolean;
     function GetInteractive: Boolean;
@@ -614,7 +615,8 @@ begin
   try
     LLoopStatusPointer := AQServicesStatus;
 
-    for LIndex := 0 to AServiceInfoCount - 1 do
+    LIndex := 0;
+    while LIndex <= AServiceInfoCount - 1 do
     begin
       LServiceName := LLoopStatusPointer^.lpServiceName;
 
@@ -637,6 +639,7 @@ begin
         LDependentSerevices.Add(LServiceInfo);
 
       Inc(LLoopStatusPointer);
+      Inc(LIndex);
     end;
 
     Result := LDependentSerevices.ToArray;
@@ -970,18 +973,12 @@ begin
       FOwnProcess := (LServiceConfig^.dwServiceType and SERVICE_WIN32) = SERVICE_WIN32_OWN_PROCESS;
       FInteractive := (LServiceConfig^.dwServiceType and SERVICE_INTERACTIVE_PROCESS) = SERVICE_INTERACTIVE_PROCESS;
 
-      case LServiceConfig^.dwStartType of
-        SERVICE_AUTO_START: FStartType := ssAutomatic;
-        SERVICE_DEMAND_START: FStartType := ssManual;
-        SERVICE_DISABLED: FStartType := ssDisabled;
-        else
-        begin
-          FServiceManager.HandleError(SERVICE_STARTTYPE_UNKNOWN);
-          Exit
-        end;
-      end;
+      if not GetServiceStartType(LServiceConfig^, FStartType) then
+        Exit;
 
       FBinaryPathName := LServiceConfig^.lpBinaryPathName;
+      //TODO: Parse Path and filename and Commandline, especially path and filename would be usefull to have on hand
+
       FUsername := LServiceConfig^.lpServiceStartName;
       FConfigQueried := True;
 
@@ -1044,6 +1041,22 @@ begin
 end;
 
 
+
+function TServiceInfo.GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
+begin
+  Result := True;
+
+  case AServiceConfig.dwStartType of
+    SERVICE_AUTO_START: AStartType := ssAutomatic;
+    SERVICE_DEMAND_START: AStartType := ssManual;
+    SERVICE_DISABLED: AStartType := ssDisabled;
+    else
+    begin
+      FServiceManager.HandleError(SERVICE_STARTTYPE_UNKNOWN); // TODO: Should we raise always in here
+      Exit(False);
+    end;
+  end;
+end;
 
 procedure TServiceInfo.SetState(const AServiceState: TServiceState);
 var
