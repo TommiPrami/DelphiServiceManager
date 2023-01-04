@@ -116,6 +116,7 @@ type
     FRaiseExceptions: Boolean;
     FServicesByName: TDictionary<string, TServiceInfo>;
     FServicesList: TObjectList<TServiceInfo>;
+    function CheckOS: Boolean;
     function GetActive: Boolean;
     function GetService(const AIndex: Integer): TServiceInfo;
     function GetServiceCount: Integer;
@@ -236,7 +237,6 @@ begin
     Exit;
   end;
 
-  // And... Get all the data...
   GetMem(LServices, LBytesNeeded); // will raise EOutOfMemory if fails
   try
     EnumerateAndAddServices(LServices, LBytesNeeded);
@@ -261,6 +261,29 @@ begin
 
   if not Active and AActivateServiceManager then
     Active := True;
+end;
+
+function TServiceManager.CheckOS: Boolean;
+var
+  LVersionInfo: TOSVersionInfo;
+begin
+  Result := False;
+  // Check that we are NT, 2000, XP or above...
+  LVersionInfo.dwOSVersionInfoSize := sizeof(LVersionInfo);
+
+  if not GetVersionEx(LVersionInfo) then
+  begin
+    HandleError(LAST_OS_ERROR);
+    Exit;
+  end;
+
+  if LVersionInfo.dwPlatformId <> VER_PLATFORM_WIN32_NT then
+  begin
+    HandleError(OS_NOT_CUPPOORTED);
+    Exit;
+  end;
+
+  Result := True;
 end;
 
 procedure TServiceManager.CleanupServices;
@@ -358,7 +381,6 @@ end;
 
 function TServiceManager.GetService(const AIndex: Integer): TServiceInfo;
 begin
-  // Fetch the object of interest
   Result := FServicesList[AIndex];
 end;
 
@@ -498,7 +520,6 @@ end;
 
 function TServiceManager.Open: Boolean;
 var
-  LVersionInfo: TOSVersionInfo;
   LDesiredAccess: DWORD;
 begin
   if Active then
@@ -507,20 +528,8 @@ begin
   Result := False;
 
   ResetLastError;
-  // Check that we are NT, 2000, XP or above...
-  LVersionInfo.dwOSVersionInfoSize := sizeof(LVersionInfo);
-
-  if not GetVersionEx(LVersionInfo) then
-  begin
-    HandleError(LAST_OS_ERROR);
+  if not CheckOS then
     Exit;
-  end;
-
-  if LVersionInfo.dwPlatformId <> VER_PLATFORM_WIN32_NT then
-  begin
-    HandleError(OS_NOT_CUPPOORTED);
-    Exit;
-  end;
 
   // Open service manager
   LDesiredAccess := SC_MANAGER_CONNECT or SC_MANAGER_ENUMERATE_SERVICE;
