@@ -68,6 +68,8 @@ type
     function GetFileName: string;
     function GetPath: string;
     procedure RefreshIfNeeded;
+  protected
+    function InitializeByName(const AServiceName: string): Boolean;
   public
     constructor Create(const AParentServiceManager: TServiceManager);
     destructor Destroy; override;
@@ -128,16 +130,19 @@ type
     FRaiseExceptions: Boolean;
     FServicesByName: TDictionary<string, TServiceInfo>;
     FServicesList: TObjectList<TServiceInfo>;
+    FGetServiceListOnActive: Boolean;
     function CheckOS: Boolean;
     function GetActive: Boolean;
     function GetService(const AIndex: Integer): TServiceInfo;
     function GetServiceCount: Integer;
     procedure CleanupServices;
     procedure EnumerateAndAddServices(const AServices: PEnumServiceStatus; const AByesNeeded: DWORD);
+    procedure AddServiceInfoToLists(const AServiceInfo: TServiceInfo);
     procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
     procedure SetActive(const ASetToActive: Boolean);
     procedure SetAllowLocking(const AValue: Boolean);
     procedure SetMachineName(const AMachineName: string);
+    function InitializeSingleService(const AServiceName: string): TServiceInfo;
   protected
     { using classic protected visibility to give TServiceInfo access to TServiceManager services that nare not public }
     function GetManagerHandle: SC_HANDLE;
@@ -162,6 +167,8 @@ type
     { Find services by name (case insensitive). Works only while active. If no service can be found
       an exception will be raised. }
     function ServiceByName(const AServiceName: string; const AAllowUnkown: Boolean = False): TServiceInfo;
+    { Get array of services, sorted by display name, Serrvice manager owns objects, so handle with care. }
+    function GetServicesByDisplayName: TArray<TServiceInfo>;
     { Delete a service... }
     // procedure DeleteService(Index: Integer);
     { Get the number of services. This number is refreshed when the @link(Active) is
@@ -187,8 +194,7 @@ type
     property LastSystemErrorCode: DWord read FLastSystemErrorCode;
     property LastSystemErrorMessage: string read FLastSystemErrorMessage;
     property LastErrorMessage: string read FLastErrorMessage;
-    { Get array of services, sorted by display name, Serrvice manager owns objects, so handle with care. }
-    function GetServicesByDisplayName: TArray<TServiceInfo>;
+    property GetServiceListOnActive: Boolean read FGetServiceListOnActive write FGetServiceListOnActive;
   end;
 
   function ServiceStateToString(const AServiceState: TServiceState): string;
@@ -267,6 +273,12 @@ begin
   FLastSystemErrorMessage := '';
 end;
 
+procedure TServiceManager.AddServiceInfoToLists(const AServiceInfo: TServiceInfo);
+begin
+  AServiceInfo.FIndex := FServicesList.Add(AServiceInfo);;
+  FServicesByName.Add(AServiceInfo.FServiceName.ToLower, AServiceInfo);
+end;
+
 procedure TServiceManager.BeginLockingProcess(const AActivateServiceManager: Boolean = True);
 begin
   AllowLocking := True;
@@ -334,6 +346,7 @@ begin
   ResetLastError;
   FRaiseExceptions := True;
   FManagerHandle := 0;
+  FGetServiceListOnActive := True;
 end;
 
 destructor TServiceManager.Destroy;
@@ -402,7 +415,21 @@ begin
   begin
     Result := nil;
 
-    if not AAllowUnkown then
+    if not FGetServiceListOnActive  then
+    begin
+      if not Active then
+      begin
+        HandleError(SERVICELIST_NOT_ACTIVE);
+        Exit;
+      end;
+
+      Result := InitializeSingleService(AServiceName);
+      if Assigned(Result) then
+        AddServiceInfoToLists(Result);
+    end;
+
+
+    if not AAllowUnkown and not Assigned(Result) then
       HandleError(SERVICE_NOT_FOUND);
   end;
 end;
@@ -457,17 +484,27 @@ begin
   end;
 end;
 
+function TServiceManager.InitializeSingleService(const AServiceName: string): TServiceInfo;
+begin
+  Result := TServiceInfo.Create(Self);
+  try
+    if not Result.InitializeByName(AServiceName) then
+      FreeAndNil(Result);
+  except
+    FreeAndNil(Result);
+  end;
+end;
+
 procedure TServiceManager.ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
 var
-  LSereviceInfo: TServiceInfo;
+  LServiceInfo: TServiceInfo;
 begin
-  LSereviceInfo := TServiceInfo.Create(Self);
-  LSereviceInfo.FServiceName := AServiceEnumStatus.lpServiceName;
-  LSereviceInfo.FDisplayName := AServiceEnumStatus.lpDisplayName;
-  LSereviceInfo.FServiceStatus := AServiceEnumStatus.ServiceStatus;
+  LServiceInfo := TServiceInfo.Create(Self);
+  LServiceInfo.FServiceName := AServiceEnumStatus.lpServiceName;
+  LServiceInfo.FDisplayName := AServiceEnumStatus.lpDisplayName;
+  LServiceInfo.FServiceStatus := AServiceEnumStatus.ServiceStatus;
 
-  LSereviceInfo.FIndex := FServicesList.Add(LSereviceInfo);;
-  FServicesByName.Add(LSereviceInfo.FServiceName.ToLower, LSereviceInfo);
+  AddServiceInfoToLists(LServiceInfo);
 end;
 
 procedure TServiceManager.SetActive(const ASetToActive: Boolean);
@@ -556,7 +593,8 @@ begin
   end;
 
   // Fetch the srvices list
-  Result := RebuildServicesList;
+  if FGetServiceListOnActive then
+    Result := RebuildServicesList;
 end;
 
 function TServiceManager.Unlock: Boolean;
@@ -756,6 +794,15 @@ begin
       Result := ssStopped; // Make compiler happy
     end;
   end;
+end;
+
+function TServiceInfo.InitializeByName(const AServiceName: string): Boolean;
+begin
+  FServiceName := AServiceName;
+
+  Result := QueryConfig;
+  if Result then
+    Result := Query;
 end;
 
 function TServiceInfo.Query: Boolean;
@@ -1020,6 +1067,10 @@ begin
       ParseBinaryPath;
 
       FUsername := LServiceConfig^.lpServiceStartName;
+
+      if FDisplayName = '' then
+        FDisplayName := LServiceConfig^.lpDisplayName;
+
       FConfigQueried := True;
 
       Result := True;

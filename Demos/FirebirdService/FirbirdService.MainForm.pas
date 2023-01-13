@@ -32,7 +32,7 @@ type
     function GetLogIndent(const AIndent: Integer): string;
     function GetServiceNamesString(const AServiceInfo: TServiceInfo): string;
     function RemoveLineBreaks(const AMessage: string): string;
-    procedure ActivateOrRefreshServiceManager;
+    procedure ActivateOrRefreshServiceManager(const AGetServiceListOnActive: Boolean);
     procedure Log(const AException: Exception; const AIndent: Integer = 0); overload;
     procedure Log(const AMessage: string; const AIndent: Integer = 0); overload;
   public
@@ -52,10 +52,13 @@ const
 
 {$R *.dfm}
 
-procedure TFormFirebierdServiceMain.ActivateOrRefreshServiceManager;
+procedure TFormFirebierdServiceMain.ActivateOrRefreshServiceManager(const AGetServiceListOnActive: Boolean);
 begin
   if not FServciceManager.Active then
+  begin
+    FServciceManager.GetServiceListOnActive := AGetServiceListOnActive;
     FServciceManager.Active := True
+  end
   else
     FServciceManager.RebuildServicesList;
 end;
@@ -68,7 +71,7 @@ begin
   Log('Enumerate services...');
 
   try
-    ActivateOrRefreshServiceManager;
+    ActivateOrRefreshServiceManager(True);
 
     LServices := FServciceManager.GetServicesByDisplayName;
 
@@ -104,7 +107,7 @@ begin
   LDepedencyCount := 0;
 
   try
-    ActivateOrRefreshServiceManager;
+    ActivateOrRefreshServiceManager(True);
 
     LService := FServciceManager.ServiceByName(WINDOWS_AUDIO_SERVICE_NAME);
     if not Assigned(LService) then
@@ -192,13 +195,14 @@ begin
   Log('Query Firebird service status...');
 
   try
-    ActivateOrRefreshServiceManager;
+    ActivateOrRefreshServiceManager(False);
 
     LFirebirdService := FServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
     LServiceRunning := LFirebirdService.State = ssRunning;
     Log(IfThen(LServiceRunning, 'Firebird Service Runnin', 'Firebird Service NOT Runnin'), 1);
 
+    Log('DisplayName: "' + LFirebirdService.DisplayName + '"', 2);
     Log('Path: "' + LFirebirdService.Path + '"', 2);
     Log('File name: "' + LFirebirdService.FileName + '"', 2);
     Log('Command line: "' + LFirebirdService.CommandLine + '"', 2);
@@ -217,7 +221,7 @@ begin
   Log('Starting Firebird service...');
 
   try
-   ActivateOrRefreshServiceManager;
+   ActivateOrRefreshServiceManager(True);
 
     LFirebirdService := FServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
@@ -245,7 +249,7 @@ begin
   Log('Stopping Firebird service...');
 
   try
-    ActivateOrRefreshServiceManager;
+    ActivateOrRefreshServiceManager(True);
 
     LFirebirdService := FServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
