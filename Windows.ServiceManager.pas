@@ -27,24 +27,23 @@ type
   { Gives information of and controls a single Service. Can be accessed via @link(TServiceManager). }
   TServiceInfo = class(TObject)
   private
-    FIndex: Integer;
-    FServiceManager: TServiceManager;
-    FServiceHandle: SC_HANDLE;
-    FServiceStatus: TServiceStatus;
-    FServiceName: string;
-    FDisplayName: string;
-    { Placeholder for the live}
-    FLive: Boolean;
-    FConfigQueried: Boolean;
-    FOwnProcess: Boolean;
-    FInteractive: Boolean;
-    FStartType: TServiceStartup;
     FBinaryPathName: string;
-    FPath: string;
-    FFileName: string;
     FCommandLine: string;
-    FUserName: string;
+    FConfigQueried: Boolean;
+    FDisplayName: string;
+    FFileName: string;
+    FIndex: Integer;
+    FInteractive: Boolean;
+    FLive: Boolean;
+    FOwnProcess: Boolean;
+    FPath: string;
+    FServiceHandle: SC_HANDLE;
     FServiceHandleAccess: DWORD;
+    FServiceManager: TServiceManager;
+    FServiceName: string;
+    FServiceStatus: TServiceStatus;
+    FStartType: TServiceStartup;
+    FUserName: string;
     function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer): TArray<TServiceInfo>;
     function GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
     function GetState: TServiceState;
