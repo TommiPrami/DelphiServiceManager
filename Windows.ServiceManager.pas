@@ -646,6 +646,7 @@ begin
 
   FConfigQueried := False;
   FServiceHandle := 0;
+  FServiceHandleAccess := 0;
   FLive := False;
 end;
 
@@ -659,7 +660,6 @@ var
 begin
   Result := [];
 
-  // SetLength(Result, AServiceInfoCount);
   LDependentSerevices := TList<TServiceInfo>.Create;
   try
     LLoopStatusPointer := AQServicesStatus;
