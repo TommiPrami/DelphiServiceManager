@@ -118,6 +118,7 @@ type
   TServiceManager = class(TObject)
   strict private
     FAllowLocking: Boolean;
+    FGetServiceListOnActive: Boolean;
     FLastErrorCode: Integer;
     FLastErrorMessage: string;
     FLastSystemErrorCode: DWord;
@@ -128,19 +129,18 @@ type
     FRaiseExceptions: Boolean;
     FServicesByName: TDictionary<string, TServiceInfo>;
     FServicesList: TObjectList<TServiceInfo>;
-    FGetServiceListOnActive: Boolean;
     function CheckOS: Boolean;
     function GetActive: Boolean;
     function GetService(const AIndex: Integer): TServiceInfo;
     function GetServiceCount: Integer;
+    function InitializeSingleService(const AServiceName: string): TServiceInfo;
+    procedure AddServiceInfoToLists(const AServiceInfo: TServiceInfo);
     procedure CleanupServices;
     procedure EnumerateAndAddServices(const AServices: PEnumServiceStatus; const AByesNeeded: DWORD);
-    procedure AddServiceInfoToLists(const AServiceInfo: TServiceInfo);
     procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
     procedure SetActive(const ASetToActive: Boolean);
     procedure SetAllowLocking(const AValue: Boolean);
     procedure SetMachineName(const AMachineName: string);
-    function InitializeSingleService(const AServiceName: string): TServiceInfo;
   protected
     { using classic protected visibility to give TServiceInfo access to TServiceManager services that nare not public }
     function GetManagerHandle: SC_HANDLE;
