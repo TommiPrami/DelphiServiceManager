@@ -320,10 +320,9 @@ begin
 
   Result := False;
 
-  // CleanupServices
   ResetLastError;
   CleanupServices;
-  // Close service manager
+
   if Assigned(FLockHandle) then
     if not Unlock then
       Exit;
