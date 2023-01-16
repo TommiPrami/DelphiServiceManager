@@ -1169,7 +1169,7 @@ begin
     SERVICE_DISABLED: AStartType := ssDisabled;
     else
     begin
-      FServiceManager.HandleError(SERVICE_STARTTYPE_UNKNOWN); // TODO: Should we raise always in here
+      FServiceManager.HandleError(SERVICE_STARTTYPE_UNKNOWN);
       Exit(False);
     end;
   end;
