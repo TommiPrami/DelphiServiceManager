@@ -44,6 +44,7 @@ type
     FFileName: string;
     FCommandLine: string;
     FUserName: string;
+    FServiceHandleAccess: DWORD;
     function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer): TArray<TServiceInfo>;
     function GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
     function GetState: TServiceState;
@@ -206,15 +207,14 @@ uses
 
 function ServiceStateToString(const AServiceState: TServiceState): string;
 begin
-  // TODO: Might be better to use "Starting[...]" instead of "Start pending..."
   // TODO: Should make this easier to localize, if needed.
   case AServiceState of
     ssStopped: Result := 'Stopped';
-    ssStartPending: Result := 'Start pending...';
-    ssStopPending: Result := 'Stop pending...';
+    ssStartPending: Result := 'Starting...';
+    ssStopPending: Result := 'Stopping...';
     ssRunning: Result := 'Running';
-    ssContinuePending: Result := 'Continue pending...';
-    ssPausePending: Result := 'Pause pending...';
+    ssContinuePending: Result := 'Continuing...';
+    ssPausePending: Result := 'Pausing...';
     ssPaused: Result := 'Paused';
   end;
 end;
@@ -636,6 +636,7 @@ begin
 
   CloseServiceHandle(FServiceHandle);
   FServiceHandle := 0;
+  FServiceHandleAccess := 0;
 end;
 
 constructor TServiceInfo.Create(const AParentServiceManager: TServiceManager);
@@ -669,7 +670,7 @@ begin
     begin
       LServiceName := LLoopStatusPointer^.lpServiceName;
 
-      { TODO: Here we have weird issue.
+      { Here we have weird issue.
 
         Getting dependencies of "Windows audio" -service.
         we get dirrent name (AarSvc) than than expected AudioEndpointBuilder for the
@@ -752,16 +753,16 @@ end;
 
 function TServiceInfo.GetHandle(const AAccess: DWORD): Boolean;
 begin
-  { TODO: here is a bug or missing sanity check, I think.
-
-          Should check the AAccess, error if handle allocated but Access
-          is different than previously used. Then Code logic/structure most likely wrong.
-
-          All operations should be nested between GetHandle try..finally CleanupHandle, or have same
-          Access needs
-  }
   if FServiceHandle <> 0 then
-    Exit(True);
+  begin
+    if AAccess = FServiceHandleAccess then
+      Exit(True)
+    else
+    begin
+      FServiceManager.HandleError(SERVICE_ACCESS_DIFFERS);
+      Exit(False);
+    end;
+  end;
 
   FServiceManager.ResetLastError;
 
@@ -773,6 +774,8 @@ begin
     FServiceManager.HandleError(LAST_OS_ERROR);
     Exit;
   end
+  else
+    FServiceHandleAccess := AAccess;
 end;
 
 function TServiceInfo.GetState: TServiceState;

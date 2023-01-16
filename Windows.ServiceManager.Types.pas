@@ -20,6 +20,7 @@ type
   EServiceDidNotRespond = class(ECustomServiceManagerException);
   EServiceServiceStartTypeUnknown = class(ECustomServiceManagerException);
   ECannotSetTransitionalState = class(ECustomServiceManagerException);
+  EServiceAccessDiffers = class(ECustomServiceManagerException);
 
   TErrorInfo = record
     ErrorCode: Integer;
