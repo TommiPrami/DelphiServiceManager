@@ -45,29 +45,27 @@ type
     FStartType: TServiceStartup;
     FUserName: string;
     function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer): TArray<TServiceInfo>;
-    function GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
-    function GetState: TServiceState;
-    function GetOwnProcess: Boolean;
-    function GetInteractive: Boolean;
-    function GetStartType: TServiceStartup;
     function GetBinaryPathname: string;
-    function WaitForPendingServiceState(const AServiceState: TServiceState): Boolean;
-    procedure SetState(const AServiceState: TServiceState);
-    function GetServiceAccepts: TServiceAccepts;
-    procedure SetStartType(const AValue: TServiceStartup);
-    procedure CleanupHandle;
-    function GetHandle(const AAccess: DWORD): Boolean;
-    procedure ParseBinaryPath;
-    { Query the current status of this service }
-    function Query: Boolean;
-    { Wait for a given status of this service... }
-    function WaitFor(const AState: DWORD): Boolean;
-    { Fetch the configuration information }
-    function QueryConfig: Boolean;
     function GetCommandLine: string;
     function GetFileName: string;
+    function GetHandle(const AAccess: DWORD): Boolean;
+    function GetInteractive: Boolean;
+    function GetOwnProcess: Boolean;
     function GetPath: string;
+    function GetServiceAccepts: TServiceAccepts;
+    function GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
+    function GetStartType: TServiceStartup;
+    function GetState: TServiceState;
+    function HandleOK: Boolean;
+    function Query: Boolean;
+    function QueryConfig: Boolean;
+    function WaitFor(const AState: DWORD): Boolean;
+    function WaitForPendingServiceState(const AServiceState: TServiceState): Boolean;
+    procedure CleanupHandle;
+    procedure ParseBinaryPath;
     procedure RefreshIfNeeded;
+    procedure SetStartType(const AValue: TServiceStartup);
+    procedure SetState(const AServiceState: TServiceState);
   protected
     function InitializeByName(const AServiceName: string): Boolean;
   public
@@ -752,7 +750,7 @@ end;
 
 function TServiceInfo.GetHandle(const AAccess: DWORD): Boolean;
 begin
-  if FServiceHandle <> 0 then
+  if HandleOK then
   begin
     if AAccess = FServiceHandleAccess then
       Exit(True)
@@ -767,7 +765,7 @@ begin
 
   FServiceHandle := OpenService(FServiceManager.GetManagerHandle, PChar(FServiceName), AAccess);
 
-  Result := FServiceHandle > 0;
+  Result := HandleOK;
   if not Result then
   begin
     FServiceManager.HandleError(LAST_OS_ERROR);
@@ -798,6 +796,11 @@ begin
   end;
 end;
 
+function TServiceInfo.HandleOK: Boolean;
+begin
+  Result := FServiceHandle <> 0;
+end;
+
 function TServiceInfo.InitializeByName(const AServiceName: string): Boolean;
 begin
   FServiceName := AServiceName;
@@ -814,7 +817,7 @@ begin
   Result := False;
   FServiceManager.ResetLastError;
 
-  if FServiceHandle <> 0 then
+  if HandleOK then
   begin
     if not QueryServiceStatus(FServiceHandle, LStatus) then
     begin
