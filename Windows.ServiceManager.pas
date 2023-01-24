@@ -447,9 +447,7 @@ var
   LErrorInfo: TErrorInfo;
   LOSError: EOSError;
 begin
-  FLastErrorCode := AErrorCode;
-
-  if FLastErrorCode = LAST_OS_ERROR then
+  if AErrorCode = LAST_OS_ERROR then
   begin
     FLastSystemErrorCode := GetLastError;
     if FLastSystemErrorCode <> 0 then
@@ -471,6 +469,7 @@ begin
   end
   else
   begin
+    FLastErrorCode := AErrorCode;
     LErrorInfo := ErrorInfoArray[AErrorCode - 1];
 
     FLastErrorMessage := LErrorInfo.ErrorMessage;
