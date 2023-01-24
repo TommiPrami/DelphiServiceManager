@@ -141,6 +141,9 @@ type
     procedure SetActive(const ASetToActive: Boolean);
     procedure SetAllowLocking(const AValue: Boolean);
     procedure SetMachineName(const AMachineName: string);
+  private
+    function GetError: Boolean;
+    function GetErrorMessage: string;
   protected
     { using classic protected visibility to give TServiceInfo access to TServiceManager services that nare not public }
     function GetManagerHandle: SC_HANDLE;
@@ -188,6 +191,8 @@ type
     { Raise Exceptions, if all functions should return False if it fails, then more info at Last*Error* properties}
     property RaiseExceptions: Boolean read FRaiseExceptions write FRaiseExceptions;
     // Error properties, check HandleError()
+    property Error: Boolean read GetError;
+    property ErrorMessage: string read GetErrorMessage;
     property LastErrorCode: Integer read FLastErrorCode;
     property LastSystemErrorCode: DWord read FLastSystemErrorCode;
     property LastSystemErrorMessage: string read FLastSystemErrorMessage;
@@ -393,6 +398,21 @@ end;
 function TServiceManager.GetActive: Boolean;
 begin
   Result := FManagerHandle <> 0;
+end;
+
+function TServiceManager.GetError: Boolean;
+begin
+  Result := (FLastErrorCode <> 0) or (FLastSystemErrorCode <> 0);
+end;
+
+function TServiceManager.GetErrorMessage: string;
+begin
+  Result := '';
+
+  if FLastErrorCode <> 0 then
+    Result := Format('Error (%d) with message:', [FLastErrorCode, FLastErrorMessage])
+  else if FLastSystemErrorCode <> 0 then
+    Result := Format('System error (%d) with message:', [FLastSystemErrorCode, FLastSystemErrorMessage]);
 end;
 
 function TServiceManager.GetManagerHandle: SC_HANDLE;
