@@ -153,7 +153,8 @@ type
     procedure ResetLastError;
     procedure SortArray(var AServiceInfoArray: TArray<TServiceInfo>);
   public
-    constructor Create;
+    constructor Create(const AMachineName: string = ''; const AGetServiceListOnActive: Boolean = True;
+      const ARaiseExceptions: Boolean = True);
     destructor Destroy; override;
 
     // Begin- and EndLockingProcess, so can easily do propcess between try..finally, which need locking
@@ -335,19 +336,21 @@ begin
   CloseServiceHandle(FManagerHandle);
   FManagerHandle := 0;
 
-  Result := FManagerHandle = 0;
+  Result := not GetActive;
 end;
 
-constructor TServiceManager.Create;
+constructor TServiceManager.Create(const AMachineName: string = ''; const AGetServiceListOnActive: Boolean = True;
+  const ARaiseExceptions: Boolean = True);
 begin
   inherited Create;
 
   FServicesList := TObjectList<TServiceInfo>.Create(True);
   FServicesByName := TDictionary<string, TServiceInfo>.Create;
   ResetLastError;
-  FRaiseExceptions := True;
   FManagerHandle := 0;
-  FGetServiceListOnActive := True;
+  FMachineName := AMachineName;
+  FRaiseExceptions := ARaiseExceptions;
+  FGetServiceListOnActive := AGetServiceListOnActive;
 end;
 
 destructor TServiceManager.Destroy;
@@ -608,7 +611,8 @@ begin
   end;
 
   // Fetch the srvices list
-  if FGetServiceListOnActive then
+  Result :=  GetActive;
+  if Result and FGetServiceListOnActive then
     Result := RebuildServicesList;
 end;
 
