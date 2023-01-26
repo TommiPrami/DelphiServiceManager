@@ -154,7 +154,7 @@ type
     procedure SortArray(var AServiceInfoArray: TArray<TServiceInfo>);
   public
     constructor Create(const AHostName: string = ''; const AGetServiceListOnActive: Boolean = True;
-      const ARaiseExceptions: Boolean = True);
+      const ARaiseExceptions: Boolean = True; const AAllowLocking: Boolean = False);
     destructor Destroy; override;
 
     // Begin- and EndLockingProcess, so can easily do propcess between try..finally, which need locking
@@ -340,7 +340,7 @@ begin
 end;
 
 constructor TServiceManager.Create(const AHostName: string = ''; const AGetServiceListOnActive: Boolean = True;
-  const ARaiseExceptions: Boolean = True);
+  const ARaiseExceptions: Boolean = True; const AAllowLocking: Boolean = False);
 begin
   inherited Create;
 
@@ -351,6 +351,7 @@ begin
   FHostName := AHostName;
   FRaiseExceptions := ARaiseExceptions;
   FGetServiceListOnActive := AGetServiceListOnActive;
+  FAllowLocking := AAllowLocking;
 end;
 
 destructor TServiceManager.Destroy;
