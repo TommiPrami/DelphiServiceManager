@@ -18,7 +18,7 @@ unit Windows.ServiceManager;
 interface
 
 uses
-  Winapi.Windows, Winapi.Winsvc, System.SysUtils, Windows.ServiceManager.Types;
+  Winapi.Windows, Winapi.Winsvc, System.Generics.Collections, System.SysUtils, Windows.ServiceManager.Types;
 
 type
   // Forward declaration of Service manager class
@@ -127,7 +127,8 @@ type
     FMachineName: string;
     FManagerHandle: SC_HANDLE;
     FRaiseExceptions: Boolean;
-    FServicesArray: TArray<TServiceInfo>;
+    FServicesByName: TDictionary<string, TServiceInfo>;
+    FServicesList: TObjectList<TServiceInfo>;
     function CheckOS: Boolean;
     function GetActive: Boolean;
     function GetService(const AIndex: Integer): TServiceInfo;
@@ -204,7 +205,7 @@ type
 implementation
 
 uses
-  System.Generics.Collections, System.Generics.Defaults, System.SysConst, Windows.ServiceManager.Consts;
+  System.Generics.Defaults, System.SysConst, Windows.ServiceManager.Consts;
 
 function ServiceStateToString(const AServiceState: TServiceState): string;
 begin
@@ -275,14 +276,9 @@ begin
 end;
 
 procedure TServiceManager.AddServiceInfoToLists(const AServiceInfo: TServiceInfo);
-var
-  LArrayLength: Integer;
 begin
-  LArrayLength := Length(FServicesArray);
-  SetLength(FServicesArray, LArrayLength + 1);
-
-  AServiceInfo.Index := LArrayLength;
-  FServicesArray[AServiceInfo.Index] := AServiceInfo;
+  AServiceInfo.FIndex := FServicesList.Add(AServiceInfo);;
+  FServicesByName.Add(AServiceInfo.FServiceName.ToLower, AServiceInfo);
 end;
 
 procedure TServiceManager.BeginLockingProcess(const AActivateServiceManager: Boolean = True);
@@ -317,13 +313,9 @@ begin
 end;
 
 procedure TServiceManager.CleanupServices;
-var
-  LIndex: Integer;
 begin
-  for LIndex := Low(FServicesArray) to High(FServicesArray) do
-    FServicesArray[LIndex].Free;
-
-  FServicesArray := [];
+  FServicesList.Clear;
+  FServicesByName.Clear;
 end;
 
 function TServiceManager.Close: Boolean;
@@ -350,6 +342,8 @@ constructor TServiceManager.Create;
 begin
   inherited Create;
 
+  FServicesList := TObjectList<TServiceInfo>.Create(True);
+  FServicesByName := TDictionary<string, TServiceInfo>.Create;
   ResetLastError;
   FRaiseExceptions := True;
   FManagerHandle := 0;
@@ -359,6 +353,9 @@ end;
 destructor TServiceManager.Destroy;
 begin
   Active := False;
+
+  FServicesList.Free;
+  FServicesByName.Free;
 
   inherited Destroy;
 end;
@@ -425,23 +422,12 @@ end;
 
 function TServiceManager.GetService(const AIndex: Integer): TServiceInfo;
 begin
-  Result := FServicesArray[AIndex];
+  Result := FServicesList[AIndex];
 end;
 
 function TServiceManager.ServiceByName(const AServiceName: string; const AAllowUnkown: Boolean = False): TServiceInfo;
-var
-  LIndex: Integer;
 begin
-  Result := nil;
-
-  for LIndex := Low(FServicesArray) to High(FServicesArray) do
-    if SameText(FServicesArray[LIndex].Name, AServiceName) then
-    begin
-      Result := FServicesArray[LIndex];
-      Break;
-    end;
-
-  if not Assigned(Result) then
+  if not FServicesByName.TryGetValue(AServiceName.ToLower, Result) then
   begin
     Result := nil;
 
@@ -466,12 +452,12 @@ end;
 
 function TServiceManager.GetServiceCount: Integer;
 begin
-  Result := Length(FServicesArray);
+  Result := FServicesList.Count;
 end;
 
 function TServiceManager.GetServicesByDisplayName: TArray<TServiceInfo>;
 begin
-  Result := FServicesArray;
+  Result := FServicesList.ToArray;
 
   SortArray(Result);
 end;
