@@ -124,7 +124,7 @@ type
     FLastSystemErrorCode: DWord;
     FLastSystemErrorMessage: string;
     FLockHandle: SC_LOCK;
-    FMachineName: string;
+    FHostName: string;
     FManagerHandle: SC_HANDLE;
     FRaiseExceptions: Boolean;
     FServicesByName: TDictionary<string, TServiceInfo>;
@@ -140,7 +140,7 @@ type
     procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
     procedure SetActive(const ASetToActive: Boolean);
     procedure SetAllowLocking(const AValue: Boolean);
-    procedure SetMachineName(const AMachineName: string);
+    procedure SetHostName(const AHostName: string);
   private
     function GetError: Boolean;
     function GetErrorMessage: string;
@@ -153,7 +153,7 @@ type
     procedure ResetLastError;
     procedure SortArray(var AServiceInfoArray: TArray<TServiceInfo>);
   public
-    constructor Create(const AMachineName: string = ''; const AGetServiceListOnActive: Boolean = True;
+    constructor Create(const AHostName: string = ''; const AGetServiceListOnActive: Boolean = True;
       const ARaiseExceptions: Boolean = True);
     destructor Destroy; override;
 
@@ -163,7 +163,7 @@ type
     //
     function Open: Boolean;
     function Close: Boolean;
-    { Requeries the states, names etc of all services on the given @link(MachineName).
+    { Requeries the states, names etc of all services on the given @link(HostName).
       Works only while active. }
     function RebuildServicesList: Boolean;
     { Find services by name (case insensitive). Works only while active. If no service can be found
@@ -185,7 +185,7 @@ type
       works }
     property Active: Boolean read GetActive write SetActive;
     { The machine name for which you want the services list. }
-    property MachineName: string read FMachineName write SetMachineName;
+    property HostName: string read FHostName write SetHostName;
     { Allow locking... Is needed only when changing several properties in TServiceInfo.
       Property can only be set while inactive. }
     property AllowLocking: Boolean read FAllowLocking write SetAllowLocking;
@@ -339,7 +339,7 @@ begin
   Result := not GetActive;
 end;
 
-constructor TServiceManager.Create(const AMachineName: string = ''; const AGetServiceListOnActive: Boolean = True;
+constructor TServiceManager.Create(const AHostName: string = ''; const AGetServiceListOnActive: Boolean = True;
   const ARaiseExceptions: Boolean = True);
 begin
   inherited Create;
@@ -348,7 +348,7 @@ begin
   FServicesByName := TDictionary<string, TServiceInfo>.Create;
   ResetLastError;
   FManagerHandle := 0;
-  FMachineName := AMachineName;
+  FHostName := AHostName;
   FRaiseExceptions := ARaiseExceptions;
   FGetServiceListOnActive := AGetServiceListOnActive;
 end;
@@ -533,7 +533,7 @@ begin
     Close;
 end;
 
-procedure TServiceManager.SetMachineName(const AMachineName: string);
+procedure TServiceManager.SetHostName(const AHostName: string);
 begin
   if Active then
   begin
@@ -541,7 +541,7 @@ begin
     Exit;
   end;
 
-  FMachineName := AMachineName;
+  FHostName := AHostName;
 end;
 
 procedure TServiceManager.SortArray(var AServiceInfoArray: TArray<TServiceInfo>);
@@ -603,7 +603,7 @@ begin
   if FAllowLocking then
     Inc(LDesiredAccess, SC_MANAGER_LOCK);
 
-  FManagerHandle := OpenSCManager(PChar(FMachineName), nil, LDesiredAccess);
+  FManagerHandle := OpenSCManager(PChar(FHostName), nil, LDesiredAccess);
   if not Active then
   begin
     HandleError(LAST_OS_ERROR);
