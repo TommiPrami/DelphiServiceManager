@@ -353,7 +353,6 @@ begin
   MemoLog.Lines.Add(LIndent + RemoveLineBreaks(AMessage));
 end;
 
-
 procedure TFormFirebierdServiceMain.Log(const AException: Exception; const AIndent: Integer = 0);
 begin
   Log('Exception ' + AException.ClassName + ' occurent, with message: "' + AException.Message + '"', AIndent);
