@@ -959,7 +959,7 @@ end;
 
 function TServiceInfo.Start(const AWait: Boolean = True): Boolean;
 var
-  LServiceArgumentVectors: PCHar;
+  LServiceArgumentVectors: PChar;
 begin
   Result := False;
 
