@@ -278,7 +278,7 @@ end;
 
 procedure TServiceManager.AddServiceInfoToLists(const AServiceInfo: TServiceInfo);
 begin
-  AServiceInfo.FIndex := FServicesList.Add(AServiceInfo);;
+  AServiceInfo.FIndex := FServicesList.Add(AServiceInfo);
   FServicesByName.Add(AServiceInfo.FServiceName.ToLower, AServiceInfo);
 end;
 
@@ -296,7 +296,7 @@ var
 begin
   Result := False;
   // Check that we are NT, 2000, XP or above...
-  LVersionInfo.dwOSVersionInfoSize := sizeof(LVersionInfo);
+  LVersionInfo.dwOSVersionInfoSize := SizeOf(LVersionInfo);
 
   if not GetVersionEx(LVersionInfo) then
   begin
