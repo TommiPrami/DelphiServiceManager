@@ -13,7 +13,7 @@ type
   EOSNotSupported = class(ECustomServiceManagerException);
   EOperationNotAllowedWhileActive = class(ECustomServiceManagerException);
   ELockingNotAllowed = class(ECustomServiceManagerException);
-  EServiceStateUnkown = class(ECustomServiceManagerException);
+  EServiceStateUnknown = class(ECustomServiceManagerException);
   EServiceCannotBeContinued = class(ECustomServiceManagerException);
   EServiceCannotBePaused = class(ECustomServiceManagerException);
   EServiceCannotBeStopped = class(ECustomServiceManagerException);

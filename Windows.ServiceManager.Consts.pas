@@ -32,7 +32,7 @@ const
       (ErrorCode: IS_ACTIVE; ExceptionClass: EOperationNotAllowedWhileActive; ErrorMessage: 'Cannot change machine name while Active.'),
       (ErrorCode: LOCKING_NOT_ALLOWED; ExceptionClass: ELockingNotAllowed; ErrorMessage: 'Locking of the service manager not allowed.'),
       (ErrorCode: OPERATION_NOT_ALLOWED_WHILE_ACTIVE; ExceptionClass: EOperationNotAllowedWhileActive; ErrorMessage: 'Cannot change allow locking while active.'),
-      (ErrorCode: SERVICE_STATE_UNKNOWN; ExceptionClass: EServiceStateUnkown; ErrorMessage: 'Service State unknown.'),
+      (ErrorCode: SERVICE_STATE_UNKNOWN; ExceptionClass: EServiceStateUnknown; ErrorMessage: 'Service State unknown.'),
       (ErrorCode: SERVICE_CANNOT_CONTINUE; ExceptionClass: EServiceCannotBeContinued; ErrorMessage: 'Service cannot be continued.'),
       (ErrorCode: SERVICE_CANNOT_PAUSE; ExceptionClass: EServiceCannotBeContinued; ErrorMessage: 'Service cannot be paused.'),
       (ErrorCode: SERVICE_CANNOT_STOP; ExceptionClass: EServiceCannotBeStopped; ErrorMessage: 'Service cannot be Stopped.'),

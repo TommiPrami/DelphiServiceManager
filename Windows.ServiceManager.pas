@@ -168,7 +168,7 @@ type
     function RebuildServicesList: Boolean;
     { Find services by name (case insensitive). Works only while active. If no service can be found
       an exception will be raised. }
-    function ServiceByName(const AServiceName: string; const AAllowUnkown: Boolean = False): TServiceInfo;
+    function ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TServiceInfo;
     { Get array of services, sorted by display name, Serrvice manager owns objects, so handle with care. }
     function GetServicesByDisplayName: TArray<TServiceInfo>;
     { Delete a service... }
@@ -429,7 +429,7 @@ begin
   Result := FServicesList[AIndex];
 end;
 
-function TServiceManager.ServiceByName(const AServiceName: string; const AAllowUnkown: Boolean = False): TServiceInfo;
+function TServiceManager.ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TServiceInfo;
 begin
   if not FServicesByName.TryGetValue(AServiceName.ToLower, Result) then
   begin
@@ -449,7 +449,7 @@ begin
     end;
 
 
-    if not AAllowUnkown and not Assigned(Result) then
+    if not AAllowUnknown and not Assigned(Result) then
       HandleError(SERVICE_NOT_FOUND);
   end;
 end;
