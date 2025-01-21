@@ -1,4 +1,4 @@
-unit Windows.ServiceManager;
+﻿unit Windows.ServiceManager;
 
 { --------------------------------------------------------------------------- }
 {                                                                             }
