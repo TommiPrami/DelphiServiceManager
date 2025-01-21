@@ -200,7 +200,7 @@ begin
     LFirebirdService := FServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
     LServiceRunning := LFirebirdService.State = ssRunning;
-    Log(IfThen(LServiceRunning, 'Firebird Service Runnin', 'Firebird Service NOT Runnin'), 1);
+    Log(IfThen(LServiceRunning, 'Firebird Service Running', 'Firebird Service NOT Running'), 1);
 
     Log('DisplayName: "' + LFirebirdService.DisplayName + '"', 2);
     Log('Path: "' + LFirebirdService.Path + '"', 2);
