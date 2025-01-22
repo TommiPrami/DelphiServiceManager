@@ -176,7 +176,7 @@ type
     { Get the number of services. This number is refreshed when the @link(Active) is
       set to True or @link(RebuildServicesList) is called. Works only while active. }
     property ServiceCount: Integer read GetServiceCount;
-    { Find a servce by index in the services list. This list is refreshed when the @link(Active) is
+    { Find a service by index in the services list. This list is refreshed when the @link(Active) is
       set to True or @link(RebuildServicesList) is called. Works only while active. Valid Index
       values are 0..@link(ServiceCount) - 1. }
     property Services[const AIndex: Integer]: TServiceInfo read GetService;
