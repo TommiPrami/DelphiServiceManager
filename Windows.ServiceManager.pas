@@ -1052,7 +1052,7 @@ begin
     ssContinuePending: Result := WaitFor(SERVICE_RUNNING);
     ssPausePending: Result := WaitFor(SERVICE_PAUSED);
     else
-      Exit(True); // supress FixInsight warning
+      Exit(True); // suppress FixInsight warning
   end;
 end;
 
