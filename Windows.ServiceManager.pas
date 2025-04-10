@@ -941,7 +941,7 @@ begin
       Exit;
     end;
 
-    if not ControlService(FServiceHandle,SERVICE_CONTROL_PAUSE, LStatus) then
+    if not ControlService(FServiceHandle, SERVICE_CONTROL_PAUSE, LStatus) then
     begin
       FServiceManager.HandleError(LAST_OS_ERROR);
       Exit;
@@ -996,7 +996,7 @@ begin
       Exit;
     end;
 
-    if not ControlService(FServiceHandle,SERVICE_CONTROL_STOP, LStatus) then
+    if not ControlService(FServiceHandle, SERVICE_CONTROL_STOP, LStatus) then
     begin
       FServiceManager.HandleError(LAST_OS_ERROR);
       Exit;
