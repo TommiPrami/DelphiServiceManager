@@ -355,7 +355,7 @@ end;
 
 procedure TFormFirebierdServiceMain.Log(const AException: Exception; const AIndent: Integer = 0);
 begin
-  Log('Exception ' + AException.ClassName + ' occurent, with message: "' + AException.Message + '"', AIndent);
+  Log('Exception ' + AException.ClassName + ' occurred, with message: "' + AException.Message + '"', AIndent);
   Log('');
 end;
 
