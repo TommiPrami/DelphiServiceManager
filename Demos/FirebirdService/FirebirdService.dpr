@@ -1,8 +1,8 @@
-﻿program FirbirdService;
+﻿program FirebirdService;
 
 uses
   Vcl.Forms,
-  FirbirdService.MainForm in 'FirbirdService.MainForm.pas' {FormFirebierdServiceMain},
+  FirebirdService.MainForm in 'FirebirdService.MainForm.pas' {FormFirebirdServiceMain},
   Windows.ServiceManager in '..\..\Windows.ServiceManager.pas',
   Windows.ServiceManager.Types in '..\..\Windows.ServiceManager.Types.pas',
   Windows.ServiceManager.Consts in '..\..\Windows.ServiceManager.Consts.pas';

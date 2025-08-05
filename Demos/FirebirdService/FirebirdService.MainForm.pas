@@ -1,4 +1,4 @@
-﻿unit FirbirdService.MainForm;
+﻿unit FirebirdService.MainForm;
 
 interface
 
@@ -8,7 +8,7 @@ uses
   Windows.ServiceManager;
 
 type
-  TFormFirebierdServiceMain = class(TForm)
+  TFormFirebirdServiceMain = class(TForm)
     ButtonEnumerateServices: TButton;
     ButtonEumerateWindowsAudioServiceDependencies: TButton;
     ButtonFixFirebirdService: TButton;
@@ -40,7 +40,7 @@ type
   end;
 
 var
-  FormFirebierdServiceMain: TFormFirebierdServiceMain;
+  FormFirebirdServiceMain: TFormFirebirdServiceMain;
 
 implementation
 
@@ -52,7 +52,7 @@ const
 
 {$R *.dfm}
 
-procedure TFormFirebierdServiceMain.ActivateOrRefreshServiceManager(const AGetServiceListOnActive: Boolean);
+procedure TFormFirebirdServiceMain.ActivateOrRefreshServiceManager(const AGetServiceListOnActive: Boolean);
 begin
   if not FServciceManager.Active then
   begin
@@ -63,7 +63,7 @@ begin
     FServciceManager.RebuildServicesList;
 end;
 
-procedure TFormFirebierdServiceMain.ButtonEnumerateServicesClick(Sender: TObject);
+procedure TFormFirebirdServiceMain.ButtonEnumerateServicesClick(Sender: TObject);
 var
   LServices: TArray<TServiceInfo>;
   LService: TServiceInfo;
@@ -95,7 +95,7 @@ begin
   Log('');
 end;
 
-procedure TFormFirebierdServiceMain.ButtonEumerateWindowsAudioServiceDependenciesClick(Sender: TObject);
+procedure TFormFirebirdServiceMain.ButtonEumerateWindowsAudioServiceDependenciesClick(Sender: TObject);
 const
   WINDOWS_AUDIO_SERVICE_NAME = 'Audiosrv';
 var
@@ -140,7 +140,7 @@ begin
   Log('');
 end;
 
-procedure TFormFirebierdServiceMain.ButtonFixFirebirdServiceClick(Sender: TObject);
+procedure TFormFirebirdServiceMain.ButtonFixFirebirdServiceClick(Sender: TObject);
 var
   LServciceManager: TServiceManager;
   LFirebirdService: TServiceInfo;
@@ -187,7 +187,7 @@ begin
   end;
 end;
 
-procedure TFormFirebierdServiceMain.ButtonQueryFirebirdClick(Sender: TObject);
+procedure TFormFirebirdServiceMain.ButtonQueryFirebirdClick(Sender: TObject);
 var
   LServiceRunning: Boolean;
   LFirebirdService: TServiceInfo;
@@ -214,7 +214,7 @@ begin
   Log('');
 end;
 
-procedure TFormFirebierdServiceMain.ButtonStartFirebirdServiceClick(Sender: TObject);
+procedure TFormFirebirdServiceMain.ButtonStartFirebirdServiceClick(Sender: TObject);
 var
   LFirebirdService: TServiceInfo;
 begin
@@ -242,7 +242,7 @@ begin
   Log('');
 end;
 
-procedure TFormFirebierdServiceMain.ButtonStopFirebirdServiceClick(Sender: TObject);
+procedure TFormFirebirdServiceMain.ButtonStopFirebirdServiceClick(Sender: TObject);
 var
   LFirebirdService: TServiceInfo;
 begin
@@ -270,7 +270,7 @@ begin
   Log('');
 end;
 
-procedure TFormFirebierdServiceMain.ButtonTestErrorHandlerClick(Sender: TObject);
+procedure TFormFirebirdServiceMain.ButtonTestErrorHandlerClick(Sender: TObject);
 var
   LServciceManager: TServiceManager;
   LExceptionRaised: Boolean;
@@ -321,17 +321,17 @@ begin
   Log('');
 end;
 
-procedure TFormFirebierdServiceMain.FormCreate(Sender: TObject);
+procedure TFormFirebirdServiceMain.FormCreate(Sender: TObject);
 begin
   FServciceManager := TServiceManager.Create;
 end;
 
-procedure TFormFirebierdServiceMain.FormDestroy(Sender: TObject);
+procedure TFormFirebirdServiceMain.FormDestroy(Sender: TObject);
 begin
   FServciceManager.Free;
 end;
 
-function TFormFirebierdServiceMain.GetLogIndent(const AIndent: Integer): string;
+function TFormFirebirdServiceMain.GetLogIndent(const AIndent: Integer): string;
 begin
   if AIndent > 0 then
     Result := StringOfChar(' ', AIndent * 2) + '- '
@@ -339,12 +339,12 @@ begin
     Result := '';
 end;
 
-function TFormFirebierdServiceMain.GetServiceNamesString(const AServiceInfo: TServiceInfo): string;
+function TFormFirebirdServiceMain.GetServiceNamesString(const AServiceInfo: TServiceInfo): string;
 begin
   Result := AServiceInfo.DisplayName + ' (' + AServiceInfo.Name + ')';
 end;
 
-procedure TFormFirebierdServiceMain.Log(const AMessage: string; const AIndent: Integer = 0);
+procedure TFormFirebirdServiceMain.Log(const AMessage: string; const AIndent: Integer = 0);
 var
   LIndent: string;
 begin
@@ -353,13 +353,13 @@ begin
   MemoLog.Lines.Add(LIndent + RemoveLineBreaks(AMessage));
 end;
 
-procedure TFormFirebierdServiceMain.Log(const AException: Exception; const AIndent: Integer = 0);
+procedure TFormFirebirdServiceMain.Log(const AException: Exception; const AIndent: Integer = 0);
 begin
   Log('Exception ' + AException.ClassName + ' occurred, with message: "' + AException.Message + '"', AIndent);
   Log('');
 end;
 
-function TFormFirebierdServiceMain.RemoveLineBreaks(const AMessage: string): string;
+function TFormFirebirdServiceMain.RemoveLineBreaks(const AMessage: string): string;
 begin
   // Just quick and dirty way to get error message into one log line
   Result := AMessage.Replace(#13, ' ', [rfReplaceAll]);

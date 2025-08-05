@@ -1,7 +1,7 @@
-object FormFirebierdServiceMain: TFormFirebierdServiceMain
+object FormFirebirdServiceMain: TFormFirebirdServiceMain
   Left = 0
   Top = 0
-  Caption = 'FormFirebierdServiceMain'
+  Caption = 'FormFirebirdServiceMain'
   ClientHeight = 411
   ClientWidth = 1200
   Color = clBtnFace
