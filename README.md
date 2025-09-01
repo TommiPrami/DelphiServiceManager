@@ -1,4 +1,8 @@
-# DelphiServiceManager
+﻿# DelphiServiceManager 0.2
 
-Service manager classes by Gurus Ritsaert Hornstra and Darian Miller. I (Tommi Prami) did some tweaking and refactoring. Slapped on premissive MIT licence if no objections (Original didn't have any).
+Service manager classes by Gurus Ritsaert Hornstra and Darian Miller. 
+
+I (Tommi Prami) did some tweaking and refactoring. 
+Slapped on premissive MIT licence if no objections 
+(Original didn't have any).
 
