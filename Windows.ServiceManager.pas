@@ -1,10 +1,10 @@
-﻿unit Windows.ServiceManager;
+unit Windows.ServiceManager;
 
 { --------------------------------------------------------------------------- }
 {                                                                             }
 { Written with                                                                }
 {   - Delphi XE3 Pro                                                          }
-{   - Refactored with 11.2                                                    }
+{   - Refactored with 12.3                                                    }
 {                                                                             }
 { Created Nov 24, 2012 by Darian Miller                                       }
 {   - Some refactoring etc by Tommi Prami                                     }
@@ -57,7 +57,7 @@ type
     function GetStartType: TServiceStartup;
     function GetState: TServiceState;
     function HandleOK: Boolean;
-    function Query: Boolean;
+    function QueryStatus: Boolean;
     function QueryConfig: Boolean;
     function WaitFor(const AState: DWORD): Boolean;
     function WaitForPendingServiceState(const AServiceState: TServiceState): Boolean;
@@ -169,7 +169,7 @@ type
     { Find services by name (case insensitive). Works only while active. If no service can be found
       an exception will be raised. }
     function ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TServiceInfo;
-    { Get array of services, sorted by display name, Serrvice manager owns objects, so handle with care. }
+    { Get array of services, sorted by display name, Service manager owns objects, so handle with care. }
     function GetServicesByDisplayName: TArray<TServiceInfo>;
     { Delete a service... }
     // procedure DeleteService(Index: Integer);
@@ -258,7 +258,7 @@ begin
     Exit;
   end;
 
-  GetMem(LServices, LBytesNeeded); // will raise EOutOfMemory if fails
+  GetMem(LServices, LBytesNeeded);
   try
     EnumerateAndAddServices(LServices, LBytesNeeded);
   finally
@@ -386,7 +386,10 @@ begin
 
   if not EnumServicesStatus(FManagerHandle, SERVICE_WIN32, SERVICE_STATE_ALL, AServices, LBytesNeeded, LBytesNeeded,
     LServicesReturned, LResumeHandle) then
+  begin
+    HandleError(LAST_OS_ERROR);
     Exit;
+  end;
 
   LServicesLoopPointer := AServices;
   LIndex := 0;
@@ -444,12 +447,11 @@ begin
       end;
 
       Result := InitializeSingleService(AServiceName);
-      if Assigned(Result) then
-        AddServiceInfoToLists(Result);
     end;
 
-
-    if not AAllowUnknown and not Assigned(Result) then
+    if Assigned(Result) then
+      AddServiceInfoToLists(Result)
+    else if not AAllowUnknown then
       HandleError(SERVICE_NOT_FOUND);
   end;
 end;
@@ -801,7 +803,7 @@ end;
 function TServiceInfo.GetState: TServiceState;
 begin
   if FLive then
-    Query;
+    QueryStatus;
 
   case FServiceStatus.dwCurrentState of
     SERVICE_STOPPED: Result := ssStopped;
@@ -829,11 +831,12 @@ begin
   FServiceName := AServiceName;
 
   Result := QueryConfig;
+
   if Result then
-    Result := Query;
+    Result := QueryStatus;
 end;
 
-function TServiceInfo.Query: Boolean;
+function TServiceInfo.QueryStatus: Boolean;
 var
   LStatus: TServiceStatus;
 begin
@@ -1017,7 +1020,7 @@ var
   LOldCheckPoint: DWORD;
   LWait: DWORD;
 begin
-  Result := Query;
+  Result := QueryStatus;
 
   if Result then
     while AState <> FServiceStatus.dwCurrentState do
@@ -1030,7 +1033,7 @@ begin
 
       Sleep(LWait);
 
-      Query;
+      QueryStatus;
 
       if AState = FServiceStatus.dwCurrentState then
         Break
@@ -1062,16 +1065,18 @@ var
   LBytesNeeded: DWORD;
 begin
   Result := False;
+  LBytesNeeded := 0;
 
   if GetHandle(SERVICE_QUERY_CONFIG) then
   try
     // See how large our buffer must be...
-    Assert(not QueryServiceConfig(FServiceHandle, nil, 0, LBytesNeeded), 'Could not get buffer size');
-
-    if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+    if QueryServiceConfig(FServiceHandle, nil, 0, LBytesNeeded) then
     begin
-      FServiceManager.HandleError(LAST_OS_ERROR);
-      Exit;
+      if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+      begin
+        FServiceManager.HandleError(LAST_OS_ERROR);
+        Exit;
+      end;
     end;
 
     GetMem(LServiceConfig, LBytesNeeded);
@@ -1170,7 +1175,7 @@ begin
   Result := [];
 
   if FLive then
-    Query;
+    QueryStatus;
 
   if FServiceStatus.dwControlsAccepted and SERVICE_ACCEPT_PAUSE_CONTINUE <> 0 then
     Result := Result + [saPauseContinue];
@@ -1206,7 +1211,7 @@ var
 begin
   // Make sure we have the latest current state and that it is not a transitional state.
   if not FLive then
-    Query;
+    QueryStatus;
 
   if not WaitForPendingServiceState(GetState) then
     FServiceManager.HandleError(SERVICE_TIMEOUT);
