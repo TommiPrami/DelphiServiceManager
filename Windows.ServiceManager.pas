@@ -476,6 +476,7 @@ begin
   if AErrorCode = LAST_OS_ERROR then
   begin
     FLastSystemErrorCode := GetLastError;
+
     if FLastSystemErrorCode <> 0 then
       FLastSystemErrorMessage := SysErrorMessage(FLastSystemErrorCode)
     else

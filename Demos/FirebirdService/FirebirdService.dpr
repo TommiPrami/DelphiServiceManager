@@ -12,6 +12,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TFormFirebierdServiceMain, FormFirebierdServiceMain);
+  Application.CreateForm(TFormFirebirdServiceMain, FormFirebirdServiceMain);
   Application.Run;
 end.
