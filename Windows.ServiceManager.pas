@@ -299,6 +299,9 @@ var
   LVersionInfo: TOSVersionInfo;
 begin
   Result := False;
+
+  ResetLastError;
+
   // Check that we are NT, 2000, XP or above...
   LVersionInfo.dwOSVersionInfoSize := SizeOf(LVersionInfo);
 
@@ -602,7 +605,6 @@ begin
 
   Result := False;
 
-  ResetLastError;
   if not CheckOS then
     Exit;
 
@@ -1117,12 +1119,11 @@ begin
       FreeMem(LServiceConfig);
     end;
 
-    // Get Delayed state
-    QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, nil, 0, @LBytesNeeded); // Get Buffer Length
+    QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, nil, 0, @LBytesNeeded); 
     GetMem(LBuffer, LBytesNeeded);
     try
-    if QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, LBuffer, LBytesNeeded, @LBytesNeeded) then
-      FDelayed := LPSERVICE_DELAYED_AUTO_START_INFO(LBuffer)^.fDelayedAutostart;
+      if QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, LBuffer, LBytesNeeded, @LBytesNeeded) then
+        FDelayed := LPSERVICE_DELAYED_AUTO_START_INFO(LBuffer).fDelayedAutostart;
     finally
       FreeMem(LBuffer);
     end;
