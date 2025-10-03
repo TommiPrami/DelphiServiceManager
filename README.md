@@ -1,4 +1,4 @@
-﻿# DelphiServiceManager 0.2
+﻿# DelphiServiceManager 0.3
 
 **Service manager classes by**
 - Gurus:
