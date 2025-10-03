@@ -1323,7 +1323,6 @@ begin
       if not ChangeServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, @DelayedInfo) then
       begin
         FServiceManager.HandleError(LAST_OS_ERROR);
-        raise Exception.Create('SERVICE_CONFIG_DELAYED_AUTO_START_INFO');
         Exit;
       end;
 
