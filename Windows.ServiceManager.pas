@@ -24,7 +24,7 @@ type
   // Forward declaration of Service manager class
   TServiceManager = class;
 
-  { Gives information of and controls a single Service. Can be accessed via @link(TServiceManager). }
+  { Information of and controls a single Service. Can be accessed via @link(TServiceManager). }
   TServiceInfo = class(TObject)
   private
     FBinaryPathName: string;
@@ -149,7 +149,7 @@ type
     function GetError: Boolean;
     function GetErrorMessage: string;
   protected
-    { using classic protected visibility to give TServiceInfo access to TServiceManager services that nare not public }
+    { using classic protected visibility to give TServiceInfo access to TServiceManager services that are not public }
     function GetManagerHandle: SC_HANDLE;
     function Lock: Boolean;
     function Unlock: Boolean;
@@ -254,7 +254,16 @@ begin
   // Get the amount of memory needed...
   if EnumServicesStatus(FManagerHandle, SERVICE_WIN32, SERVICE_STATE_ALL, LServices, 0, LBytesNeeded, LServicesReturned,
     LResumeHandle) then
+  begin
+    { No nedd for error handling here, almost always fall for this.
+
+      this is
+        "if EnumServicesStatus()" NOT -> "if not EnumServicesStatus()" -case
+
+      If needs nore memory, continue, if error is something ense, handled below.
+    }
     Exit;
+  end;
 
   if GetLastError <> ERROR_MORE_DATA then
   begin
@@ -302,7 +311,7 @@ begin
 
   ResetLastError;
 
-  // Check that we are NT, 2000, XP or above...
+  // Check that we are NT, 2000, XP or above, hopefully Always...
   LVersionInfo.dwOSVersionInfoSize := SizeOf(LVersionInfo);
 
   if not GetVersionEx(LVersionInfo) then
@@ -620,7 +629,7 @@ begin
     Exit;
   end;
 
-  // Fetch the srvices list
+  // Fetch the services list
   Result :=  GetActive;
   if Result and FGetServiceListOnActive then
     Result := RebuildServicesList;
@@ -634,6 +643,7 @@ begin
 
   Result := False;
   ResetLastError;
+
   // Unlock...
   if not UnlockServiceDatabase(FLockHandle) then
   begin
