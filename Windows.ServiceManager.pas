@@ -44,7 +44,7 @@ type
     FServiceStatus: TServiceStatus;
     FStartType: TServiceStartup;
     FUserName: string;
-    FDelayed: Boolean;
+    FDelayedAutoStart: Boolean;
     function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer): TArray<TServiceInfo>;
     function GetBinaryPathname: string;
     function GetCommandLine: string;
@@ -67,7 +67,7 @@ type
     procedure RefreshIfNeeded;
     procedure SetStartType(const AValue: TServiceStartup);
     procedure SetState(const AServiceState: TServiceState);
-    procedure SetDelayed(const AValue: Boolean);
+    procedure SetDelayedAutoStart(const AValue: Boolean);
   protected
     function InitializeByName(const AServiceName: string): Boolean;
   public
@@ -87,8 +87,8 @@ type
     function Start(const AWait: Boolean = True): Boolean;
     { Name of this service. }
     property Name: string read FServiceName;
-    { Get/Set Service as Delayed }
-    property Delayed: Boolean read FDelayed write SetDelayed;
+    { Get/Set Service as DelayedAutoStart }
+    property DelayedAutoStart: Boolean read FDelayedAutoStart write SetDelayedAutoStart;
     { Display name of this service }
     property DisplayName: string read FDisplayName;
     { The current state of the service. You can set the service only to the non-transitional states.
@@ -1133,7 +1133,7 @@ begin
     GetMem(LBuffer, LBytesNeeded);
     try
       if QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, LBuffer, LBytesNeeded, @LBytesNeeded) then
-        FDelayed := LPSERVICE_DELAYED_AUTO_START_INFO(LBuffer).fDelayedAutostart;
+        FDelayedAutoStart := LPSERVICE_DELAYED_AUTO_START_INFO(LBuffer).fDelayedAutostart;
     finally
       FreeMem(LBuffer);
     end;
@@ -1312,14 +1312,14 @@ begin
   end;
 end;
 
-procedure TServiceInfo.SetDelayed(const AValue: Boolean);
+procedure TServiceInfo.SetDelayedAutoStart(const AValue: Boolean);
 var
   DelayedInfo: SERVICE_DELAYED_AUTO_START_INFO;
 begin
-  // Check if it is not a change?
+  // Check if it's not changed?
   QueryConfig;
 
-  if AValue = FDelayed then
+  if AValue = FDelayedAutoStart then
     Exit;
 
   // Alter it...
@@ -1337,7 +1337,7 @@ begin
       end;
 
       // well... we changed it, mark as such
-      FDelayed := AValue;
+      FDelayedAutoStart := AValue;
     finally
       CleanupHandle;
     end;
