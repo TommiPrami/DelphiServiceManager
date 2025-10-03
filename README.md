@@ -3,7 +3,7 @@
 **Service manager classes by**
 - Gurus:
   - Ritsaert Hornstra
-  - Darian Miller. 
+  - Darian Miller 
 
 I (Tommi Prami) did some tweaking and refactoring. 
 
