@@ -52,7 +52,8 @@ type
     will be kept in the service database). }
   TServiceStartup = (ssAutomatic,
                      ssManual,
-                     ssDisabled);
+                     ssDisabled,
+                     ssAutomaticDelayed);
 
 
 implementation

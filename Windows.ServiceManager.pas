@@ -21,11 +21,20 @@ uses
   Winapi.Windows, Winapi.Winsvc, System.Generics.Collections, System.SysUtils, Windows.ServiceManager.Types;
 
 type
+  { Helpers }
+  TServiceStateHelper = record helper for TServiceState
+    function ToString: string;
+  end;
+
+  TServiceStartupHelper = record helper for TServiceStartup
+    function ToString: string;
+  end;
+
   { General service information record }
   TServiceInfoRecord = record
     BinaryPathName: string; { Path to the binary that implements the service. }
     CommandLine: string;
-    DelayedAutoStart: Boolean; { Delayed load of this service. }
+    //DelayedAutoStart: Boolean; { Delayed load of this service. }
     Description: String; { Description of this service. }
     DisplayName: string; { Display name of this service }
     FileName: string;
@@ -93,8 +102,6 @@ type
     { Action: Start a not running service.
       You can use the @link(State) property to change the state from ssStopped to ssRunning }
     function Start(const AWait: Boolean = True): Boolean;
-    { Get/Set Service as DelayedAutoStart }
-    property DelayedAutoStart: Boolean read FInfo.DelayedAutoStart write SetDelayedAutoStart;
     { The current state of the service. You can set the service only to the non-transitional states.
       You can restart the service by first setting the State to first ssStopped and second ssRunning. }
     property State: TServiceState read GetState write SetState;
@@ -196,21 +203,20 @@ type
     property GetServiceListOnActive: Boolean read FGetServiceListOnActive write FGetServiceListOnActive;
   end;
 
-  function ServiceStateToString(const AServiceState: TServiceState): string;
-  function ServiceStartupToString(const AInfo: TServiceInfoRecord): string;
-
 implementation
 
 uses
   System.Generics.Defaults, System.SysConst, Windows.ServiceManager.Consts,
   Vcl.Dialogs;
 
-function ServiceStateToString(const AServiceState: TServiceState): string;
+{ Helper for TServiceState }
+
+function TServiceStateHelper.ToString: string;
 begin
   Result := '';
 
   // TODO: Should make this easier to localize, if needed.
-  case AServiceState of
+  case Self of
     ssStopped: Result := 'Stopped';
     ssStartPending: Result := 'Starting...';
     ssStopPending: Result := 'Stopping...';
@@ -218,22 +224,23 @@ begin
     ssContinuePending: Result := 'Continuing...';
     ssPausePending: Result := 'Pausing...';
     ssPaused: Result := 'Paused';
+    else Result := ''; // Make compiler happy
   end;
 end;
 
-function ServiceStartupToString(const AInfo: TServiceInfoRecord): string;
-begin
-  Result := '';
+{ Helper for TServiceStartup }
 
-  case AInfo.StartType of
-    ssAutomatic: if AInfo.DelayedAutoStart then
-                   Result := 'Automatic (Delayed Start)'
-                 else
-                   Result := 'Automatic';
+function TServiceStartupHelper.ToString: string;
+begin
+  case Self of
+    ssAutomatic:Result := 'Automatic';
     ssManual: Result := 'Manual';
     ssDisabled: Result := 'Disabled';
+    ssAutomaticDelayed: Result := 'Automatic (Delayed Start)';
+    else Result := ''; // Make compiler happy
   end;
 end;
+
 
 { TServiceManager }
 
@@ -289,11 +296,12 @@ begin
   end;
 
   // Update services info
-  for LIndex := 0 to GetServiceCount -1 do
+  RaiseExceptions := False; // Silent exceptions to avoid breaking the loop on a bad service
   try
-    Services[LIndex].RefreshIfNeeded;
-  except
-    ShowMessage('Erro getting service info: ' + Services[LIndex].FInfo.Name);
+    for LIndex := 0 to GetServiceCount -1 do
+      Services[LIndex].RefreshIfNeeded;
+  finally
+    RaiseExceptions := True; // Restore back raising
   end;
 
   Result := True;
@@ -1166,7 +1174,8 @@ begin
     GetMem(LBuffer, LBytesNeeded);
     try
       if QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, LBuffer, LBytesNeeded, @LBytesNeeded) then
-        FInfo.DelayedAutoStart := LPSERVICE_DELAYED_AUTO_START_INFO(LBuffer).fDelayedAutostart;
+        if LPSERVICE_DELAYED_AUTO_START_INFO(LBuffer).fDelayedAutostart then
+          FInfo.StartType := ssAutomaticDelayed;
     finally
       FreeMem(LBuffer);
     end;
@@ -1322,7 +1331,8 @@ end;
 
 procedure TServiceInfo.SetStartType(const AValue: TServiceStartup);
 const
-  NEW_START_TYPES: array [TServiceStartup] of DWORD = (SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED);
+  SERVICE_AUTO_START_DELAYED = 0; // dummy
+  NEW_START_TYPES: array [TServiceStartup] of DWORD = (SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED, SERVICE_AUTO_START_DELAYED);
 begin
   // Check if it is not a change?
   QueryConfig;
@@ -1344,7 +1354,13 @@ begin
       end;
 
       // well... we changed it, mark as such
-      FInfo.StartType := AValue;
+      if AValue = ssAutomaticDelayed then
+      begin
+        FInfo.StartType := ssAutomaticDelayed;
+        SetDelayedAutoStart(True);
+      end
+      else
+        FInfo.StartType := AValue;
     finally
       CleanupHandle;
     end;
@@ -1360,7 +1376,7 @@ begin
   // Check if it's not changed?
   QueryConfig;
 
-  if AValue = FInfo.DelayedAutoStart then
+  if AValue = (FInfo.StartType = ssAutomaticDelayed) then
     Exit;
 
   // Alter it...
@@ -1378,7 +1394,7 @@ begin
       end;
 
       // well... we changed it, mark as such
-      FInfo.DelayedAutoStart := AValue;
+      FInfo.StartType := ssAutomaticDelayed;
     finally
       CleanupHandle;
     end;
