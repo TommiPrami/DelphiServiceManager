@@ -125,8 +125,8 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="Unit23.pas">
-            <Form>Form23</Form>
+        <DCCReference Include="SCForm.Console.pas">
+            <Form>SCConsoleForm</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <BuildConfiguration Include="Base">

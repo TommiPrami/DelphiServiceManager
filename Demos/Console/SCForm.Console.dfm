@@ -1,11 +1,11 @@
-object Form23: TForm23
+object SCConsoleForm: TSCConsoleForm
   Left = 0
   Top = 0
   Margins.Left = 6
   Margins.Top = 6
   Margins.Right = 6
   Margins.Bottom = 6
-  Caption = 'Form23'
+  Caption = 'Delphi Windows Service Manager Console'
   ClientHeight = 889
   ClientWidth = 1254
   Color = clBtnFace
@@ -16,6 +16,7 @@ object Form23: TForm23
   Font.Style = []
   WindowState = wsMaximized
   OnCreate = FormCreate
+  OnResize = FormResize
   OnShow = FormShow
   PixelsPerInch = 192
   TextHeight = 32
@@ -31,11 +32,9 @@ object Form23: TForm23
     Align = alClient
     DefaultColWidth = 128
     DefaultRowHeight = 48
+    DoubleBuffered = False
+    ParentDoubleBuffered = False
     TabOrder = 0
-    ExplicitLeft = 320
-    ExplicitTop = 368
-    ExplicitWidth = 640
-    ExplicitHeight = 240
     RowHeights = (
       48
       48
