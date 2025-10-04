@@ -51,9 +51,9 @@ type
     this service manually and ssDisabled will disallow the service to be started altogether (but it
     will be kept in the service database). }
   TServiceStartup = (ssAutomatic,
+                     ssAutomaticDelayed,
                      ssManual,
-                     ssDisabled,
-                     ssAutomaticDelayed);
+                     ssDisabled);
 
 
 implementation

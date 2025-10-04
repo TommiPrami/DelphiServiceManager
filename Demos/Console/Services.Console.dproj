@@ -129,6 +129,9 @@
             <Form>SCConsoleForm</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="..\..\Windows.ServiceManager.pas"/>
+        <DCCReference Include="..\..\Windows.ServiceManager.Types.pas"/>
+        <DCCReference Include="..\..\Windows.ServiceManager.Consts.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -31,38 +31,46 @@ type
   end;
 
   { General service information record }
-  TServiceInfoRecord = record
-    BinaryPathName: string; { Path to the binary that implements the service. }
-    CommandLine: string;
-    //DelayedAutoStart: Boolean; { Delayed load of this service. }
-    Description: String; { Description of this service. }
-    DisplayName: string; { Display name of this service }
-    FileName: string;
-    Interactive: Boolean; { Is the service capable of interacting with the desktop. Possible: The logon must the Local System Account. }
-    Live: Boolean; { Are various properties using live information or historic information. }
-    Name: string; { Name of this service. }
-    OwnProcess: Boolean; { When service is running, does it run as a separate process (own process) or combined with other services under svchost. }
-    Path: string;
+  TServiceInfo = record
+  private
+    FStatus: TServiceStatus; { (Internal) Status of this service. }
+    FDescription: string; { Description of this service. }
+    FDisplayName: string; { Display name of this service }
+    FFileName: string;
+    FInteractive: Boolean; { Is the service capable of interacting with the desktop. Possible: The logon must the Local System Account. }
+    FLive: Boolean; { Are various properties using live information or historic information. }
+    FName: string; { Name of this service. }
+    FOwnProcess: Boolean; { When service is running, does it run as a separate process (own process) or combined with other services under svchost. }
+    FPath: string;
+    FCommandLine: string;
+    FBinaryPathName: string; { Path to the binary that implements the service. }
+  public
+    State: TServiceState; { State of this service. }
     ServiceAccepts: TServiceAccepts; { See what controls the service accepts. }
     StartType: TServiceStartup;
-    State: TServiceState; { State of this service. }
-    Status: TServiceStatus; { Status of this service. }
     UserName: string; { User name of this service }
+    property Description: string read FDescription; { Description of this service. }
+    property DisplayName: string read FDisplayName; { Display name of this service }
+    property FileName: string read FFileName;
+    property Interactive: Boolean read FInteractive; { Is the service capable of interacting with the desktop. Possible: The logon must the Local System Account. }
+    property Live: Boolean read FLive; { Are various properties using live information or historic information. }
+    property Name: string read FName; { Name of this service. }
+    property OwnProcess: Boolean read FOwnProcess; { When service is running, does it run as a separate process (own process) or combined with other services under svchost. }
+    property Path: string read FPath;
+    property CommandLine: string read FCommandLine;
+    property BinaryPathName: string read FBinaryPathName; { Path to the binary that implements the service. }
   end;
 
-  { Forward declaration of Service manager class}
   TServiceManager = class;
 
   { Information of and controls a single Service. Can be accessed via @link(TServiceManager). }
-  TServiceInfo = class(TObject)
-  private
+  TService = class(TObject)
+  strict private
     FConfigQueried: Boolean;
-    FIndex: Integer;
     FServiceHandle: SC_HANDLE;
     FServiceHandleAccess: DWORD;
     FServiceManager: TServiceManager;
-    FInfo: TServiceInfoRecord;
-    function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer): TArray<TServiceInfo>;
+    function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceCount: Integer): TArray<TService>;
     function GetBinaryPathname: string;
     function GetCommandLine: string;
     function GetFileName: string;
@@ -75,24 +83,28 @@ type
     function GetStartType: TServiceStartup;
     function GetState: TServiceState;
     function HandleOK: Boolean;
-    function QueryStatus: Boolean;
     function QueryConfig: Boolean;
+    function QueryStatus: Boolean;
     function WaitFor(const AState: DWORD): Boolean;
     function WaitForPendingServiceState(const AServiceState: TServiceState): Boolean;
     procedure CleanupHandle;
     procedure ParseBinaryPath;
-    procedure RefreshIfNeeded;
+    procedure SetDelayedAutoStart(const AValue: Boolean);
     procedure SetStartType(const AValue: TServiceStartup);
     procedure SetState(const AServiceState: TServiceState);
-    procedure SetDelayedAutoStart(const AValue: Boolean);
-  protected
+  private
+    FInfo: TServiceInfo;
+    FIndex: Integer;
+    function InternalServiceStateToState(const ACurrentState: DWORD): TServiceState;
     function InitializeByName(const AServiceName: string): Boolean;
+    procedure RefreshIfNeeded;
+  protected
   public
     constructor Create(const AParentServiceManager: TServiceManager);
     destructor Destroy; override;
 
     { Get array of services that depent on this service }
-    function Dependents: TArray<TServiceInfo>;
+    function Dependents: TArray<TService>;
     { Action: Pause a running service. }
     function Pause(const AWait: Boolean = True): Boolean;
     { Action: Continue a paused service. }
@@ -113,7 +125,7 @@ type
     { Index in ServiceManagers list }
     property Index: Integer read FIndex write FIndex;
     { General service information property }
-    property Info: TServiceInfoRecord read FInfo;
+    property Info: TServiceInfo read FInfo;
   end;
 
   { A service manager allows the services of a particular machine to be explored and modified. }
@@ -129,14 +141,14 @@ type
     FHostName: string;
     FManagerHandle: SC_HANDLE;
     FRaiseExceptions: Boolean;
-    FServicesByName: TDictionary<string, TServiceInfo>;
-    FServicesList: TObjectList<TServiceInfo>;
+    FServicesByName: TDictionary<string, TService>;
+    FServicesList: TObjectList<TService>;
     function CheckOS: Boolean;
     function GetActive: Boolean;
-    function GetService(const AIndex: Integer): TServiceInfo;
+    function GetService(const AIndex: Integer): TService;
     function GetServiceCount: Integer;
-    function InitializeSingleService(const AServiceName: string): TServiceInfo;
-    procedure AddServiceInfoToLists(const AServiceInfo: TServiceInfo);
+    function InitializeSingleService(const AServiceName: string): TService;
+    procedure AddServiceToLists(const AService: TService);
     procedure CleanupServices;
     procedure EnumerateAndAddServices(const AServices: PEnumServiceStatus; const AByesNeeded: DWORD);
     procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
@@ -147,13 +159,13 @@ type
     function GetError: Boolean;
     function GetErrorMessage: string;
   protected
-    { using classic protected visibility to give TServiceInfo access to TServiceManager services that are not public }
+    { using classic protected visibility to give TService access to TServiceManager services that are not public }
     function GetManagerHandle: SC_HANDLE;
     function Lock: Boolean;
     function Unlock: Boolean;
     procedure HandleError(const AErrorCode: Integer; const AForceException: Boolean = False);
     procedure ResetLastError;
-    procedure SortArray(var AServiceInfoArray: TArray<TServiceInfo>);
+    procedure SortArray(var AServiceArray: TArray<TService>);
   public
     constructor Create(const AHostName: string = ''; const AGetServiceListOnActive: Boolean = True;
       const ARaiseExceptions: Boolean = True; const AAllowLocking: Boolean = False);
@@ -170,9 +182,9 @@ type
     function RebuildServicesList: Boolean;
     { Find services by name (case insensitive). Works only while active. If no service can be found
       an exception will be raised. }
-    function ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TServiceInfo;
+    function ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TService;
     { Get array of services, sorted by display name, Service manager owns objects, so handle with care. }
-    function GetServicesByDisplayName: TArray<TServiceInfo>;
+    function GetServicesByDisplayName: TArray<TService>;
     { Delete a service... }
     // procedure DeleteService(Index: Integer);
     { Get the number of services. This number is refreshed when the @link(Active) is
@@ -181,14 +193,14 @@ type
     { Find a service by index in the services list. This list is refreshed when the @link(Active) is
       set to True or @link(RebuildServicesList) is called. Works only while active. Valid Index
       values are 0..@link(ServiceCount) - 1. }
-    property Services[const AIndex: Integer]: TServiceInfo read GetService;
+    property Services[const AIndex: Integer]: TService read GetService;
     { Activate / deactivate the service manager. In active state can you access the individual
       service, check RaiseExceptions property and open and close methods, thiose will affect on how this property
       works }
     property Active: Boolean read GetActive write SetActive;
     { The machine name for which you want the services list. }
     property HostName: string read FHostName write SetHostName;
-    { Allow locking... Is needed only when changing several properties in TServiceInfo.
+    { Allow locking... Is needed only when changing several properties in TService.
       Property can only be set while inactive. }
     property AllowLocking: Boolean read FAllowLocking write SetAllowLocking;
     { Raise Exceptions, if all functions should return False if it fails, then more info at Last*Error* properties}
@@ -206,8 +218,7 @@ type
 implementation
 
 uses
-  System.Generics.Defaults, System.SysConst, Windows.ServiceManager.Consts,
-  Vcl.Dialogs;
+  System.Generics.Defaults, System.SysConst, Windows.ServiceManager.Consts;
 
 { Helper for TServiceState }
 
@@ -224,7 +235,8 @@ begin
     ssContinuePending: Result := 'Continuing...';
     ssPausePending: Result := 'Pausing...';
     ssPaused: Result := 'Paused';
-    else Result := ''; // Make compiler happy
+    else
+      Result := ''; // Make compiler happy
   end;
 end;
 
@@ -237,7 +249,8 @@ begin
     ssManual: Result := 'Manual';
     ssDisabled: Result := 'Disabled';
     ssAutomaticDelayed: Result := 'Automatic (Delayed Start)';
-    else Result := ''; // Make compiler happy
+    else
+      Result := ''; // Make compiler happy
   end;
 end;
 
@@ -315,10 +328,10 @@ begin
   FLastSystemErrorMessage := '';
 end;
 
-procedure TServiceManager.AddServiceInfoToLists(const AServiceInfo: TServiceInfo);
+procedure TServiceManager.AddServiceToLists(const AService: TService);
 begin
-  AServiceInfo.FIndex := FServicesList.Add(AServiceInfo);
-  FServicesByName.Add(AServiceInfo.FInfo.Name.ToLower, AServiceInfo);
+  AService.FIndex := FServicesList.Add(AService);
+  FServicesByName.Add(AService.Info.FName.ToLower, AService);
 end;
 
 procedure TServiceManager.BeginLockingProcess(const AActivateServiceManager: Boolean = True);
@@ -386,8 +399,8 @@ constructor TServiceManager.Create(const AHostName: string = ''; const AGetServi
 begin
   inherited Create;
 
-  FServicesList := TObjectList<TServiceInfo>.Create(True);
-  FServicesByName := TDictionary<string, TServiceInfo>.Create;
+  FServicesList := TObjectList<TService>.Create(True);
+  FServicesByName := TDictionary<string, TService>.Create;
   ResetLastError;
   FManagerHandle := 0;
   FHostName := AHostName;
@@ -469,12 +482,12 @@ begin
   Result := FManagerHandle;
 end;
 
-function TServiceManager.GetService(const AIndex: Integer): TServiceInfo;
+function TServiceManager.GetService(const AIndex: Integer): TService;
 begin
   Result := FServicesList[AIndex];
 end;
 
-function TServiceManager.ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TServiceInfo;
+function TServiceManager.ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TService;
 begin
   if not FServicesByName.TryGetValue(AServiceName.ToLower, Result) then
   begin
@@ -492,7 +505,7 @@ begin
     end;
 
     if Assigned(Result) then
-      AddServiceInfoToLists(Result)
+      AddServiceToLists(Result)
     else if not AAllowUnknown then
       HandleError(SERVICE_NOT_FOUND);
   end;
@@ -503,7 +516,7 @@ begin
   Result := FServicesList.Count;
 end;
 
-function TServiceManager.GetServicesByDisplayName: TArray<TServiceInfo>;
+function TServiceManager.GetServicesByDisplayName: TArray<TService>;
 begin
   Result := FServicesList.ToArray;
 
@@ -548,9 +561,9 @@ begin
   end;
 end;
 
-function TServiceManager.InitializeSingleService(const AServiceName: string): TServiceInfo;
+function TServiceManager.InitializeSingleService(const AServiceName: string): TService;
 begin
-  Result := TServiceInfo.Create(Self);
+  Result := TService.Create(Self);
   try
     if not Result.InitializeByName(AServiceName) then
       FreeAndNil(Result);
@@ -561,27 +574,17 @@ end;
 
 procedure TServiceManager.ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
 var
-  LServiceInfo: TServiceInfo;
+  LService: TService;
 begin
-  LServiceInfo := TServiceInfo.Create(Self);
-  LServiceInfo.FInfo.Name := AServiceEnumStatus.lpServiceName;
-  LServiceInfo.FInfo.DisplayName := AServiceEnumStatus.lpDisplayName;
-  LServiceInfo.FInfo.Status := AServiceEnumStatus.ServiceStatus;
+  LService := TService.Create(Self);
+  LService.FInfo.FName := AServiceEnumStatus.lpServiceName;
+  LService.FInfo.FDisplayName := AServiceEnumStatus.lpDisplayName;
+  LService.FInfo.FStatus := AServiceEnumStatus.ServiceStatus;
 
   //Get current state of service
-  case LServiceInfo.FInfo.Status.dwCurrentState of
-    SERVICE_STOPPED: LServiceInfo.FInfo.State := ssStopped;
-    SERVICE_START_PENDING: LServiceInfo.FInfo.State := ssStartPending;
-    SERVICE_STOP_PENDING: LServiceInfo.FInfo.State := ssStopPending;
-    SERVICE_RUNNING: LServiceInfo.FInfo.State := ssRunning;
-    SERVICE_CONTINUE_PENDING: LServiceInfo.FInfo.State := ssContinuePending;
-    SERVICE_PAUSE_PENDING: LServiceInfo.FInfo.State := ssPausePending;
-    SERVICE_PAUSED: LServiceInfo.FInfo.State := ssPaused;
-    else
-      LServiceInfo.FInfo.State := ssStopped; // Make compiler happy
-  end;
+  LService.FInfo.State := LService.InternalServiceStateToState(LService.FInfo.FStatus.dwCurrentState);
 
-  AddServiceInfoToLists(LServiceInfo);
+  AddServiceToLists(LService);
 end;
 
 procedure TServiceManager.SetActive(const ASetToActive: Boolean);
@@ -603,12 +606,12 @@ begin
   FHostName := AHostName;
 end;
 
-procedure TServiceManager.SortArray(var AServiceInfoArray: TArray<TServiceInfo>);
+procedure TServiceManager.SortArray(var AServiceArray: TArray<TService>);
 begin
-  TArray.Sort<TServiceInfo>(AServiceInfoArray, TDelegatedComparer<TServiceInfo>.Construct(
-    function(const ALeft, ARight:TServiceInfo): Integer
+  TArray.Sort<TService>(AServiceArray, TDelegatedComparer<TService>.Construct(
+    function(const ALeft, ARight:TService): Integer
     begin
-      Result := TComparer<string>.Default.Compare(ALeft.FInfo.DisplayName, ARight.FInfo.DisplayName);
+      Result := TComparer<string>.Default.Compare(ALeft.FInfo.FDisplayName, ARight.FInfo.FDisplayName);
     end)
   );
 end;
@@ -705,9 +708,9 @@ begin
   FAllowLocking := AValue;
 end;
 
-{ TServiceInfo }
+{ TService }
 
-procedure TServiceInfo.CleanupHandle;
+procedure TService.CleanupHandle;
 begin
   if FServiceHandle = 0 then
     Exit;
@@ -717,7 +720,7 @@ begin
   FServiceHandleAccess := 0;
 end;
 
-constructor TServiceInfo.Create(const AParentServiceManager: TServiceManager);
+constructor TService.Create(const AParentServiceManager: TServiceManager);
 begin
   inherited Create;
 
@@ -726,25 +729,25 @@ begin
   FConfigQueried := False;
   FServiceHandle := 0;
   FServiceHandleAccess := 0;
-  FInfo.Live := False;
+  FInfo.FLive := False;
 end;
 
-function TServiceInfo.DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceInfoCount: Integer): TArray<TServiceInfo>;
+function TService.DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceCount: Integer): TArray<TService>;
 var
   LServiceName: string;
   LIndex: Integer;
   LLoopStatusPointer: PEnumServiceStatus;
-  LServiceInfo: TServiceInfo;
-  LDependentSerevices: TList<TServiceInfo>;
+  LServiceInfo: TService;
+  LDependentSerevices: TList<TService>;
 begin
   Result := [];
 
-  LDependentSerevices := TList<TServiceInfo>.Create;
+  LDependentSerevices := TList<TService>.Create;
   try
     LLoopStatusPointer := AQServicesStatus;
 
     LIndex := 0;
-    while LIndex <= AServiceInfoCount - 1 do
+    while LIndex <= AServiceCount - 1 do
     begin
       LServiceName := LLoopStatusPointer^.lpServiceName;
 
@@ -778,7 +781,7 @@ begin
   end;
 end;
 
-function TServiceInfo.Dependents: TArray<TServiceInfo>;
+function TService.Dependents: TArray<TService>;
 var
   LServicesStatus: PEnumServiceStatus;
   LBytesNeeded: DWORD;
@@ -822,14 +825,14 @@ begin
   end;
 end;
 
-destructor TServiceInfo.Destroy;
+destructor TService.Destroy;
 begin
   CleanupHandle;
 
   inherited Destroy;
 end;
 
-function TServiceInfo.GetHandle(const AAccess: DWORD): Boolean;
+function TService.GetHandle(const AAccess: DWORD): Boolean;
 begin
   if HandleOK then
   begin
@@ -844,7 +847,7 @@ begin
 
   FServiceManager.ResetLastError;
 
-  FServiceHandle := OpenService(FServiceManager.GetManagerHandle, PChar(FInfo.Name), AAccess);
+  FServiceHandle := OpenService(FServiceManager.GetManagerHandle, PChar(FInfo.FName), AAccess);
 
   Result := HandleOK;
   if not Result then
@@ -856,12 +859,32 @@ begin
     FServiceHandleAccess := AAccess;
 end;
 
-function TServiceInfo.GetState: TServiceState;
+function TService.GetState: TServiceState;
 begin
-  if FInfo.Live then
+  if FInfo.FLive then
     QueryStatus;
 
-  case FInfo.Status.dwCurrentState of
+  Result := InternalServiceStateToState(FInfo.FStatus.dwCurrentState);
+end;
+
+function TService.HandleOK: Boolean;
+begin
+  Result := FServiceHandle <> 0;
+end;
+
+function TService.InitializeByName(const AServiceName: string): Boolean;
+begin
+  FInfo.FName := AServiceName;
+
+  Result := QueryConfig;
+
+  if Result then
+    Result := QueryStatus;
+end;
+
+function TService.InternalServiceStateToState(const ACurrentState: DWORD): TServiceState;
+begin
+  case ACurrentState of
     SERVICE_STOPPED: Result := ssStopped;
     SERVICE_START_PENDING: Result := ssStartPending;
     SERVICE_STOP_PENDING: Result := ssStopPending;
@@ -877,22 +900,7 @@ begin
   end;
 end;
 
-function TServiceInfo.HandleOK: Boolean;
-begin
-  Result := FServiceHandle <> 0;
-end;
-
-function TServiceInfo.InitializeByName(const AServiceName: string): Boolean;
-begin
-  FInfo.Name := AServiceName;
-
-  Result := QueryConfig;
-
-  if Result then
-    Result := QueryStatus;
-end;
-
-function TServiceInfo.QueryStatus: Boolean;
+function TService.QueryStatus: Boolean;
 var
   LStatus: TServiceStatus;
 begin
@@ -923,11 +931,11 @@ begin
     end;
   end;
 
-  FInfo.Status := LStatus;
+  FInfo.FStatus := LStatus;
   Result := True;
 end;
 
-function TServiceInfo.Continue(const AWait: Boolean = True): Boolean;
+function TService.Continue(const AWait: Boolean = True): Boolean;
 var
   LStatus: TServiceStatus;
 begin
@@ -957,36 +965,36 @@ begin
   end;
 end;
 
-procedure TServiceInfo.ParseBinaryPath;
+procedure TService.ParseBinaryPath;
 var
   LCommanlineStart: Integer;
 begin
-  FInfo.Path := '';
-  FInfo.FileName := '';
-  FInfo.CommandLine := '';
+  FInfo.FPath := '';
+  FInfo.FFileName := '';
+  FInfo.FCommandLine := '';
 
-  if FInfo.BinaryPathName <> '' then
+  if FInfo.FBinaryPathName <> '' then
   begin
-    LCommanlineStart := FInfo.BinaryPathName.IndexOf('" ');
+    LCommanlineStart := FInfo.FBinaryPathName.IndexOf('" ');
     if LCommanlineStart < 0 then
-      LCommanlineStart := FInfo.BinaryPathName.IndexOf(' ');
+      LCommanlineStart := FInfo.FBinaryPathName.IndexOf(' ');
 
     if LCommanlineStart > 0 then
     begin
-      FInfo.CommandLine := FInfo.BinaryPathName.Substring(LCommanlineStart + 2);
-      FInfo.FileName := FInfo.BinaryPathName.Substring(0, LCommanlineStart + 1);
+      FInfo.FCommandLine := FInfo.FBinaryPathName.Substring(LCommanlineStart + 2);
+      FInfo.FFileName := FInfo.FBinaryPathName.Substring(0, LCommanlineStart + 1);
     end
     else
-      FInfo.FileName := FInfo.BinaryPathName;
+      FInfo.FFileName := FInfo.FBinaryPathName;
 
-    FInfo.FileName := FInfo.FileName.DeQuotedString('"');
+    FInfo.FFileName := FInfo.FFileName.DeQuotedString('"');
 
-    FInfo.Path := ExtractFilePath(FInfo.FileName);
-    FInfo.FileName := ExtractFileName(FInfo.FileName);
+    FInfo.FPath := ExtractFilePath(FInfo.FFileName);
+    FInfo.FFileName := ExtractFileName(FInfo.FFileName);
   end;
 end;
 
-function TServiceInfo.Pause(const AWait: Boolean = True): Boolean;
+function TService.Pause(const AWait: Boolean = True): Boolean;
 var
   LStatus: TServiceStatus;
 begin
@@ -1016,7 +1024,7 @@ begin
   end;
 end;
 
-function TServiceInfo.Start(const AWait: Boolean = True): Boolean;
+function TService.Start(const AWait: Boolean = True): Boolean;
 var
   LServiceArgumentVectors: PChar;
 begin
@@ -1041,7 +1049,7 @@ begin
   end;
 end;
 
-function TServiceInfo.Stop(const AWait: Boolean = True): Boolean;
+function TService.Stop(const AWait: Boolean = True): Boolean;
 var
   LStatus: TServiceStatus;
 begin
@@ -1071,7 +1079,7 @@ begin
   end;
 end;
 
-function TServiceInfo.WaitFor(const AState: DWORD): Boolean;
+function TService.WaitFor(const AState: DWORD): Boolean;
 var
   LOldCheckPoint: DWORD;
   LWait: DWORD;
@@ -1079,10 +1087,10 @@ begin
   Result := QueryStatus;
 
   if Result then
-    while AState <> FInfo.Status.dwCurrentState do
+    while AState <> FInfo.FStatus.dwCurrentState do
     begin
-      LOldCheckPoint := FInfo.Status.dwCheckPoint;
-      LWait := FInfo.Status.dwWaitHint;
+      LOldCheckPoint := FInfo.FStatus.dwCheckPoint;
+      LWait := FInfo.FStatus.dwWaitHint;
 
       if LWait <= 0 then
         LWait := 5000;
@@ -1091,19 +1099,19 @@ begin
 
       QueryStatus;
 
-      if AState = FInfo.Status.dwCurrentState then
+      if AState = FInfo.FStatus.dwCurrentState then
         Break
-      else if FInfo.Status.dwCheckPoint <> LOldCheckPoint then
+      else if FInfo.FStatus.dwCheckPoint <> LOldCheckPoint then
       begin
         FServiceManager.HandleError(SERVICE_TIMEOUT);
         Exit(False);
       end;
     end;
 
-  Result := AState = FInfo.Status.dwCurrentState;
+  Result := AState = FInfo.FStatus.dwCurrentState;
 end;
 
-function TServiceInfo.WaitForPendingServiceState(const AServiceState: TServiceState): Boolean;
+function TService.WaitForPendingServiceState(const AServiceState: TServiceState): Boolean;
 begin
   case AServiceState of
     ssStartPending: Result := WaitFor(SERVICE_RUNNING);
@@ -1115,7 +1123,7 @@ begin
   end;
 end;
 
-function TServiceInfo.QueryConfig: Boolean;
+function TService.QueryConfig: Boolean;
 var
   LBuffer: PByte;
   LServiceConfig: LPQUERY_SERVICE_CONFIG;
@@ -1147,20 +1155,19 @@ begin
 
       // Analyze the query...
       Assert(LServiceConfig^.dwServiceType and SERVICE_WIN32 <> 0); // It must be a WIN32 service
-      FInfo.OwnProcess := (LServiceConfig^.dwServiceType and SERVICE_WIN32) = SERVICE_WIN32_OWN_PROCESS;
-      FInfo.Interactive := (LServiceConfig^.dwServiceType and SERVICE_INTERACTIVE_PROCESS) = SERVICE_INTERACTIVE_PROCESS;
+      FInfo.FOwnProcess := (LServiceConfig.dwServiceType and SERVICE_WIN32) = SERVICE_WIN32_OWN_PROCESS;
+      FInfo.FInteractive := (LServiceConfig.dwServiceType and SERVICE_INTERACTIVE_PROCESS) = SERVICE_INTERACTIVE_PROCESS;
 
       if not GetServiceStartType(LServiceConfig^, FInfo.StartType) then
         Exit;
 
-      FInfo.BinaryPathName := LServiceConfig^.lpBinaryPathName;
+      FInfo.FBinaryPathName := LServiceConfig.lpBinaryPathName;
       ParseBinaryPath;
 
       FInfo.Username := LServiceConfig^.lpServiceStartName;
 
-      if FInfo.DisplayName = '' then
-        FInfo.DisplayName := LServiceConfig^.lpDisplayName;
-
+      if FInfo.FDisplayName = '' then
+        FInfo.FDisplayName := LServiceConfig^.lpDisplayName;
 
       FConfigQueried := True;
 
@@ -1185,7 +1192,7 @@ begin
     GetMem(LBuffer, LBytesNeeded);
     try
     if QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DESCRIPTION, LBuffer, LBytesNeeded, @LBytesNeeded) then
-      FInfo.Description := LPSERVICE_DESCRIPTION(LBuffer)^.lpDescription;
+      FInfo.FDescription := LPSERVICE_DESCRIPTION(LBuffer)^.lpDescription;
     finally
       FreeMem(LBuffer);
     end;
@@ -1194,79 +1201,79 @@ begin
   end;
 end;
 
-procedure TServiceInfo.RefreshIfNeeded;
+procedure TService.RefreshIfNeeded;
 begin
-  if FInfo.Live or not FConfigQueried then
+  if FInfo.FLive or not FConfigQueried then
     QueryConfig;
 end;
 
-function TServiceInfo.GetOwnProcess: Boolean;
+function TService.GetOwnProcess: Boolean;
 begin
   RefreshIfNeeded;
 
-  Result := FInfo.OwnProcess;
+  Result := FInfo.FOwnProcess;
 end;
 
-function TServiceInfo.GetPath: string;
+function TService.GetPath: string;
 begin
   RefreshIfNeeded;
 
-  Result := FInfo.Path;
+  Result := FInfo.FPath;
 end;
 
-function TServiceInfo.GetInteractive: Boolean;
+function TService.GetInteractive: Boolean;
 begin
   RefreshIfNeeded;
 
-  Result := FInfo.Interactive;
+  Result := FInfo.FInteractive;
 end;
 
-function TServiceInfo.GetStartType: TServiceStartup;
+function TService.GetStartType: TServiceStartup;
 begin
   RefreshIfNeeded;
 
   Result := FInfo.StartType;
 end;
 
-function TServiceInfo.GetBinaryPathName: string;
+function TService.GetBinaryPathName: string;
 begin
   RefreshIfNeeded;
 
-  Result := FInfo.BinaryPathName;
+  Result := FInfo.FBinaryPathName;
 end;
 
-function TServiceInfo.GetCommandLine: string;
+function TService.GetCommandLine: string;
 begin
   RefreshIfNeeded;
 
-  Result := FInfo.CommandLine;
+  Result := FInfo.FCommandLine;
 end;
 
-function TServiceInfo.GetFileName: string;
+function TService.GetFileName: string;
 begin
   RefreshIfNeeded;
 
-  Result := FInfo.FileName;
+  Result := FInfo.FFileName;
 end;
 
-function TServiceInfo.GetServiceAccepts: TServiceAccepts;
+function TService.GetServiceAccepts: TServiceAccepts;
 begin
   Result := [];
 
-  if FInfo.Live then
+  if FInfo.FLive then
     QueryStatus;
 
-  if FInfo.Status.dwControlsAccepted and SERVICE_ACCEPT_PAUSE_CONTINUE <> 0 then
+  if FInfo.FStatus.dwControlsAccepted and SERVICE_ACCEPT_PAUSE_CONTINUE <> 0 then
     Result := Result + [saPauseContinue];
 
-  if FInfo.Status.dwControlsAccepted and SERVICE_ACCEPT_STOP <> 0 then
+  if FInfo.FStatus.dwControlsAccepted and SERVICE_ACCEPT_STOP <> 0 then
     Result := Result + [saStop];
 
-  if FInfo.Status.dwControlsAccepted and SERVICE_ACCEPT_SHUTDOWN <> 0 then
+  if FInfo.FStatus.dwControlsAccepted and SERVICE_ACCEPT_SHUTDOWN <> 0 then
     Result := Result + [saShutdown];
 end;
 
-function TServiceInfo.GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
+function TService.GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
 begin
   Result := True;
 
@@ -1282,12 +1289,12 @@ begin
   end;
 end;
 
-procedure TServiceInfo.SetState(const AServiceState: TServiceState);
+procedure TService.SetState(const AServiceState: TServiceState);
 var
   LOldState: TServiceState;
 begin
   // Make sure we have the latest current state and that it is not a transitional state.
-  if not FInfo.Live then
+  if not FInfo.FLive then
     QueryStatus;
 
   if not WaitForPendingServiceState(GetState) then
@@ -1329,7 +1336,7 @@ begin
 end;
 
 
-procedure TServiceInfo.SetStartType(const AValue: TServiceStartup);
+procedure TService.SetStartType(const AValue: TServiceStartup);
 const
   SERVICE_AUTO_START_DELAYED = 0; // dummy
   NEW_START_TYPES: array [TServiceStartup] of DWORD = (SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED, SERVICE_AUTO_START_DELAYED);
@@ -1369,7 +1376,7 @@ begin
   end;
 end;
 
-procedure TServiceInfo.SetDelayedAutoStart(const AValue: Boolean);
+procedure TService.SetDelayedAutoStart(const AValue: Boolean);
 var
   DelayedInfo: SERVICE_DELAYED_AUTO_START_INFO;
 begin

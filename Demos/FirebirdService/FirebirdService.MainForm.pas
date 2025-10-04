@@ -30,7 +30,7 @@ type
   strict private
     FServciceManager: TServiceManager;
     function GetLogIndent(const AIndent: Integer): string;
-    function GetServiceNamesString(const AServiceInfo: TServiceInfo): string;
+    function GetServiceNamesString(const AServiceInfo: TService): string;
     function RemoveLineBreaks(const AMessage: string): string;
     procedure ActivateOrRefreshServiceManager(const AGetServiceListOnActive: Boolean);
     procedure Log(const AException: Exception; const AIndent: Integer = 0); overload;
@@ -65,8 +65,8 @@ end;
 
 procedure TFormFirebirdServiceMain.ButtonEnumerateServicesClick(Sender: TObject);
 var
-  LServices: TArray<TServiceInfo>;
-  LService: TServiceInfo;
+  LServices: TArray<TService>;
+  LService: TService;
 begin
   Log('Enumerate services...');
 
@@ -99,9 +99,9 @@ procedure TFormFirebirdServiceMain.ButtonEumerateWindowsAudioServiceDependencies
 const
   WINDOWS_AUDIO_SERVICE_NAME = 'Audiosrv';
 var
-  LDepedencies: TArray<TServiceInfo>;
-  LService: TServiceInfo;
-  LDependantService: TServiceInfo;
+  LDepedencies: TArray<TService>;
+  LService: TService;
+  LDependantService: TService;
   LDepedencyCount: Integer;
 begin
   LDepedencyCount := 0;
@@ -113,7 +113,7 @@ begin
     if not Assigned(LService) then
       raise Exception.Create('Service not found');
 
-    Log('Eumerate "' + LService.DisplayName + '" service Dependencies...');
+    Log('Eumerate "' + LService.Info.DisplayName + '" service Dependencies...');
     MemoLog.Lines.BeginUpdate;
     try
       LDepedencies := LService.Dependents;
@@ -143,7 +143,7 @@ end;
 procedure TFormFirebirdServiceMain.ButtonFixFirebirdServiceClick(Sender: TObject);
 var
   LServciceManager: TServiceManager;
-  LFirebirdService: TServiceInfo;
+  LFirebirdService: TService;
 begin
   Log('Fixing Firebird service...');
 
@@ -172,7 +172,7 @@ begin
           LFirebirdService.Start;
         end;
 
-        Log('Service state: ' + ServiceStateToString(LFirebirdService.State), 1);
+        Log('Service state: ' + LFirebirdService.State.ToString, 1);
       finally
         LServciceManager.EndLockingProcess;
       end;
@@ -190,7 +190,7 @@ end;
 procedure TFormFirebirdServiceMain.ButtonQueryFirebirdClick(Sender: TObject);
 var
   LServiceRunning: Boolean;
-  LFirebirdService: TServiceInfo;
+  LFirebirdService: TService;
 begin
   Log('Query Firebird service status...');
 
@@ -202,10 +202,10 @@ begin
     LServiceRunning := LFirebirdService.State = ssRunning;
     Log(IfThen(LServiceRunning, 'Firebird Service Running', 'Firebird Service NOT Running'), 1);
 
-    Log('DisplayName: "' + LFirebirdService.DisplayName + '"', 2);
-    Log('Path: "' + LFirebirdService.Path + '"', 2);
-    Log('File name: "' + LFirebirdService.FileName + '"', 2);
-    Log('Command line: "' + LFirebirdService.CommandLine + '"', 2);
+    Log('DisplayName: "' + LFirebirdService.Info.DisplayName + '"', 2);
+    Log('Path: "' + LFirebirdService.Info.Path + '"', 2);
+    Log('File name: "' + LFirebirdService.Info.FileName + '"', 2);
+    Log('Command line: "' + LFirebirdService.Info.CommandLine + '"', 2);
   except
     on E: Exception do
       Log(E, 2);
@@ -216,7 +216,7 @@ end;
 
 procedure TFormFirebirdServiceMain.ButtonStartFirebirdServiceClick(Sender: TObject);
 var
-  LFirebirdService: TServiceInfo;
+  LFirebirdService: TService;
 begin
   Log('Starting Firebird service...');
 
@@ -230,7 +230,7 @@ begin
       Log('Starting service...', 1);
       LFirebirdService.Start;
 
-      Log('Service state: ' + ServiceStateToString(LFirebirdService.State), 1);
+      Log('Service state: ' + LFirebirdService.State.ToString, 1);
     end
     else
       Log('Firebird service already running', 1);
@@ -244,7 +244,7 @@ end;
 
 procedure TFormFirebirdServiceMain.ButtonStopFirebirdServiceClick(Sender: TObject);
 var
-  LFirebirdService: TServiceInfo;
+  LFirebirdService: TService;
 begin
   Log('Stopping Firebird service...');
 
@@ -258,7 +258,7 @@ begin
       Log('Stopping service...', 1);
       LFirebirdService.Stop;
 
-      Log('Service state: ' + ServiceStateToString(LFirebirdService.State), 1);
+      Log('Service state: ' + LFirebirdService.State.ToString, 1);
     end
     else
       Log('Firebird service already stopped', 1);
@@ -339,9 +339,9 @@ begin
     Result := '';
 end;
 
-function TFormFirebirdServiceMain.GetServiceNamesString(const AServiceInfo: TServiceInfo): string;
+function TFormFirebirdServiceMain.GetServiceNamesString(const AServiceInfo: TService): string;
 begin
-  Result := AServiceInfo.DisplayName + ' (' + AServiceInfo.Name + ')';
+  Result := AServiceInfo.Info.DisplayName + ' (' + AServiceInfo.Info.Name + ')';
 end;
 
 procedure TFormFirebirdServiceMain.Log(const AMessage: string; const AIndent: Integer = 0);

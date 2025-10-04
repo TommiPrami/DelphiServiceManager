@@ -10,12 +10,10 @@ type
   TSCConsoleForm = class(TForm)
     ServicesGrid: TStringGrid;
     procedure FormCreate(Sender: TObject);
-    procedure FormShow(Sender: TObject);
     procedure FormResize(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
-    { Private declarations }
-  public
-    { Public declarations }
+    procedure PopulateTheGrid;
   end;
 
 var
@@ -55,6 +53,26 @@ begin
 end;
 
 procedure TSCConsoleForm.FormCreate(Sender: TObject);
+begin
+  Cursor := crHourGlass;
+  try
+    PopulateTheGrid;
+  finally
+    Cursor := crDefault;
+  end;
+end;
+
+procedure TSCConsoleForm.FormResize(Sender: TObject);
+begin
+  ServicesGrid.ColWidths[1] := Width - (ServicesGrid.ColWidths[0] + ServicesGrid.ColWidths[2] + ServicesGrid.ColWidths[3]) - 64;
+end;
+
+procedure TSCConsoleForm.FormShow(Sender: TObject);
+begin
+  AutoSizeGridColumns(ServicesGrid);
+end;
+
+procedure TSCConsoleForm.PopulateTheGrid;
 var
   LRow: NativeUInt;
   LServiceManager: TServiceManager;
@@ -70,22 +88,12 @@ begin
     begin
       Cells[0, LRow] := LServiceManager.Services[LRow].Info.Name;
       Cells[1, LRow] := LServiceManager.Services[LRow].Info.Description;
-      Cells[2, LRow] := ServiceStateToString(LServiceManager.Services[LRow].Info.State);
-      Cells[3, LRow] := ServiceStartupToString(LServiceManager.Services[LRow].Info);
+      Cells[2, LRow] := LServiceManager.Services[LRow].Info.State.ToString;
+      Cells[3, LRow] := LServiceManager.Services[LRow].Info.StartType.ToString;
     end;
   finally
     FreeAndNil(LServiceManager);
   end;
-end;
-
-procedure TSCConsoleForm.FormResize(Sender: TObject);
-begin // Auto resize Description Column
-  ServicesGrid.ColWidths[1] := Width - (ServicesGrid.ColWidths[0] + ServicesGrid.ColWidths[2] + ServicesGrid.ColWidths[3]) - 64;
-end;
-
-procedure TSCConsoleForm.FormShow(Sender: TObject);
-begin
-  AutoSizeGridColumns(ServicesGrid);
 end;
 
 end.

@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{59E3195C-2965-40A8-8547-55A189F44952}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="FirebirdService\FirebirdService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Console\Services.Console.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="FirebirdService">
+        <MSBuild Projects="FirebirdService\FirebirdService.dproj"/>
+    </Target>
+    <Target Name="FirebirdService:Clean">
+        <MSBuild Projects="FirebirdService\FirebirdService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FirebirdService:Make">
+        <MSBuild Projects="FirebirdService\FirebirdService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Services_Console">
+        <MSBuild Projects="Console\Services.Console.dproj"/>
+    </Target>
+    <Target Name="Services_Console:Clean">
+        <MSBuild Projects="Console\Services.Console.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Services_Console:Make">
+        <MSBuild Projects="Console\Services.Console.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="FirebirdService;Services_Console"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="FirebirdService:Clean;Services_Console:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="FirebirdService:Make;Services_Console:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
