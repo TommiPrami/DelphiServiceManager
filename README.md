@@ -6,7 +6,7 @@
   - Darian Miller 
 
 Additiona work:
-  - c-michail: https://github.com/c-michail?tab=repositories
+  - c-michail: https://github.com/c-michail
   - Tommi Prami 
 
 Slapped on premissive **MIT licence if no objections (Original didn't have any)**.
