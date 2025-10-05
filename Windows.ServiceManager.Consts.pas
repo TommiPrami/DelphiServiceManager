@@ -24,7 +24,7 @@ const
   SERVICE_CANNOT_SET_STATE = 13;
   SERVICE_ACCESS_DIFFERS = 14;
 
-  ErrorInfoArray: array[0..13] of TErrorInfo =
+  ErrorInfoArray: array[0..13] of TDSMErrorInfo =
     (
       (ErrorCode: SERVICELIST_NOT_ACTIVE; ExceptionClass: ENotActive; ErrorMessage: 'BuildServicesList only works when Active.'),
       (ErrorCode: SERVICE_NOT_FOUND; ExceptionClass: EServiceNotFound; ErrorMessage: 'Service not found.'),

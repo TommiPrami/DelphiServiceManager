@@ -28,9 +28,9 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   strict private
-    FServciceManager: TServiceManager;
+    FServciceManager: TDSMServiceManager;
     function GetLogIndent(const AIndent: Integer): string;
-    function GetServiceNamesString(const AServiceInfo: TService): string;
+    function GetServiceNamesString(const AServiceInfo: TDSMService): string;
     function RemoveLineBreaks(const AMessage: string): string;
     procedure ActivateOrRefreshServiceManager(const AGetServiceListOnActive: Boolean);
     procedure Log(const AException: Exception; const AIndent: Integer = 0); overload;
@@ -65,8 +65,8 @@ end;
 
 procedure TFormFirebirdServiceMain.ButtonEnumerateServicesClick(Sender: TObject);
 var
-  LServices: TArray<TService>;
-  LService: TService;
+  LServices: TArray<TDSMService>;
+  LService: TDSMService;
 begin
   Log('Enumerate services...');
 
@@ -99,9 +99,9 @@ procedure TFormFirebirdServiceMain.ButtonEumerateWindowsAudioServiceDependencies
 const
   WINDOWS_AUDIO_SERVICE_NAME = 'Audiosrv';
 var
-  LDepedencies: TArray<TService>;
-  LService: TService;
-  LDependantService: TService;
+  LDepedencies: TArray<TDSMService>;
+  LService: TDSMService;
+  LDependantService: TDSMService;
   LDepedencyCount: Integer;
 begin
   LDepedencyCount := 0;
@@ -142,12 +142,12 @@ end;
 
 procedure TFormFirebirdServiceMain.ButtonFixFirebirdServiceClick(Sender: TObject);
 var
-  LServciceManager: TServiceManager;
-  LFirebirdService: TService;
+  LServciceManager: TDSMServiceManager;
+  LFirebirdService: TDSMService;
 begin
   Log('Fixing Firebird service...');
 
-  LServciceManager := TServiceManager.Create;
+  LServciceManager := TDSMServiceManager.Create;
   try
     try
       try
@@ -190,7 +190,7 @@ end;
 procedure TFormFirebirdServiceMain.ButtonQueryFirebirdClick(Sender: TObject);
 var
   LServiceRunning: Boolean;
-  LFirebirdService: TService;
+  LFirebirdService: TDSMService;
 begin
   Log('Query Firebird service status...');
 
@@ -216,7 +216,7 @@ end;
 
 procedure TFormFirebirdServiceMain.ButtonStartFirebirdServiceClick(Sender: TObject);
 var
-  LFirebirdService: TService;
+  LFirebirdService: TDSMService;
 begin
   Log('Starting Firebird service...');
 
@@ -244,7 +244,7 @@ end;
 
 procedure TFormFirebirdServiceMain.ButtonStopFirebirdServiceClick(Sender: TObject);
 var
-  LFirebirdService: TService;
+  LFirebirdService: TDSMService;
 begin
   Log('Stopping Firebird service...');
 
@@ -272,13 +272,13 @@ end;
 
 procedure TFormFirebirdServiceMain.ButtonTestErrorHandlerClick(Sender: TObject);
 var
-  LServciceManager: TServiceManager;
+  LServciceManager: TDSMServiceManager;
   LExceptionRaised: Boolean;
 begin
   Log('Testing error handler...');
 
   Log('Raise Exceptions', 1);
-  LServciceManager := TServiceManager.Create;
+  LServciceManager := TDSMServiceManager.Create;
   try
     try
       LExceptionRaised := False;
@@ -323,7 +323,7 @@ end;
 
 procedure TFormFirebirdServiceMain.FormCreate(Sender: TObject);
 begin
-  FServciceManager := TServiceManager.Create;
+  FServciceManager := TDSMServiceManager.Create;
 end;
 
 procedure TFormFirebirdServiceMain.FormDestroy(Sender: TObject);
@@ -339,7 +339,7 @@ begin
     Result := '';
 end;
 
-function TFormFirebirdServiceMain.GetServiceNamesString(const AServiceInfo: TService): string;
+function TFormFirebirdServiceMain.GetServiceNamesString(const AServiceInfo: TDSMService): string;
 begin
   Result := AServiceInfo.Info.DisplayName + ' (' + AServiceInfo.Info.Name + ')';
 end;

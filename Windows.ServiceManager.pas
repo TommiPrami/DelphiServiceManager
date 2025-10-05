@@ -7,7 +7,9 @@ unit Windows.ServiceManager;
 {   - Refactored with 12.3                                                    }
 {                                                                             }
 { Created Nov 24, 2012 by Darian Miller                                       }
-{   - Some refactoring etc by Tommi Prami                                     }
+{   - Additional work by                                                      }
+{     - c-michail - https://github.com/c-michail                              }
+{     - Tommi Prami                                                           }
 {                                                                             }
 { Based on answer by Ritsaert Hornstra on May 6, 2011 to question:            }
 {   - http://stackoverflow.com/questions/5913279/detect-windows-service-state }
@@ -22,16 +24,16 @@ uses
 
 type
   { Helpers }
-  TServiceStateHelper = record helper for TServiceState
+  TDSMServiceStateHelper = record helper for TDSMServiceState
     function ToString: string;
   end;
 
-  TServiceStartupHelper = record helper for TServiceStartup
+  TDSMServiceStartupHelper = record helper for TDSMServiceStartup
     function ToString: string;
   end;
 
   { General service information record }
-  TServiceInfo = record
+  TDSMServiceInfo = record
   private
     FStatus: TServiceStatus; { (Internal) Status of this service. }
     FDescription: string; { Description of this service. }
@@ -45,9 +47,9 @@ type
     FCommandLine: string;
     FBinaryPathName: string; { Path to the binary that implements the service. }
   public
-    State: TServiceState; { State of this service. }
-    ServiceAccepts: TServiceAccepts; { See what controls the service accepts. }
-    StartType: TServiceStartup;
+    State: TDSMServiceState; { State of this service. }
+    ServiceAccepts: TDSMServiceAccepts; { See what controls the service accepts. }
+    StartType: TDSMServiceStartup;
     UserName: string; { User name of this service }
     property Description: string read FDescription; { Description of this service. }
     property DisplayName: string read FDisplayName; { Display name of this service }
@@ -61,16 +63,16 @@ type
     property BinaryPathName: string read FBinaryPathName; { Path to the binary that implements the service. }
   end;
 
-  TServiceManager = class;
+  TDSMServiceManager = class;
 
-  { Information of and controls a single Service. Can be accessed via @link(TServiceManager). }
-  TService = class(TObject)
+  { Information of and controls a single Service. Can be accessed via @link(TDSMServiceManager). }
+  TDSMService = class(TObject)
   strict private
     FConfigQueried: Boolean;
     FServiceHandle: SC_HANDLE;
     FServiceHandleAccess: DWORD;
-    FServiceManager: TServiceManager;
-    function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceCount: Integer): TArray<TService>;
+    FServiceManager: TDSMServiceManager;
+    function DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceCount: Integer): TArray<TDSMService>;
     function GetBinaryPathname: string;
     function GetCommandLine: string;
     function GetFileName: string;
@@ -78,33 +80,33 @@ type
     function GetInteractive: Boolean;
     function GetOwnProcess: Boolean;
     function GetPath: string;
-    function GetServiceAccepts: TServiceAccepts;
-    function GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
-    function GetStartType: TServiceStartup;
-    function GetState: TServiceState;
+    function GetServiceAccepts: TDSMServiceAccepts;
+    function GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TDSMServiceStartup): Boolean;
+    function GetStartType: TDSMServiceStartup;
+    function GetState: TDSMServiceState;
     function HandleOK: Boolean;
     function QueryConfig: Boolean;
     function QueryStatus: Boolean;
     function WaitFor(const AState: DWORD): Boolean;
-    function WaitForPendingServiceState(const AServiceState: TServiceState): Boolean;
+    function WaitForPendingServiceState(const AServiceState: TDSMServiceState): Boolean;
     procedure CleanupHandle;
     procedure ParseBinaryPath;
     procedure SetDelayedAutoStart(const AValue: Boolean);
-    procedure SetStartType(const AValue: TServiceStartup);
-    procedure SetState(const AServiceState: TServiceState);
+    procedure SetStartType(const AValue: TDSMServiceStartup);
+    procedure SetState(const AServiceState: TDSMServiceState);
   private
-    FInfo: TServiceInfo;
+    FInfo: TDSMServiceInfo;
     FIndex: Integer;
-    function InternalServiceStateToState(const ACurrentState: DWORD): TServiceState;
+    function InternalServiceStateToState(const ACurrentState: DWORD): TDSMServiceState;
     function InitializeByName(const AServiceName: string): Boolean;
     procedure RefreshIfNeeded;
   protected
   public
-    constructor Create(const AParentServiceManager: TServiceManager);
+    constructor Create(const AParentServiceManager: TDSMServiceManager);
     destructor Destroy; override;
 
     { Get array of services that depent on this service }
-    function Dependents: TArray<TService>;
+    function Dependents: TArray<TDSMService>;
     { Action: Pause a running service. }
     function Pause(const AWait: Boolean = True): Boolean;
     { Action: Continue a paused service. }
@@ -116,20 +118,20 @@ type
     function Start(const AWait: Boolean = True): Boolean;
     { The current state of the service. You can set the service only to the non-transitional states.
       You can restart the service by first setting the State to first ssStopped and second ssRunning. }
-    property State: TServiceState read GetState write SetState;
-    { How is this service started. See @link(TServiceStartup) for a description of startup types.
+    property State: TDSMServiceState read GetState write SetState;
+    { How is this service started. See @link(TDSMServiceStartup) for a description of startup types.
       If you want to set this property, the manager must be activeted with AllowLocking set to True. }
-    property StartType: TServiceStartup read GetStartType write SetStartType;
+    property StartType: TDSMServiceStartup read GetStartType write SetStartType;
     { See what controls the service accepts. }
-    property ServiceAccepts: TServiceAccepts read GetServiceAccepts;
+    property ServiceAccepts: TDSMServiceAccepts read GetServiceAccepts;
     { Index in ServiceManagers list }
     property Index: Integer read FIndex write FIndex;
     { General service information property }
-    property Info: TServiceInfo read FInfo;
+    property Info: TDSMServiceInfo read FInfo;
   end;
 
   { A service manager allows the services of a particular machine to be explored and modified. }
-  TServiceManager = class(TObject)
+  TDSMServiceManager = class(TObject)
   strict private
     FAllowLocking: Boolean;
     FGetServiceListOnActive: Boolean;
@@ -141,14 +143,14 @@ type
     FHostName: string;
     FManagerHandle: SC_HANDLE;
     FRaiseExceptions: Boolean;
-    FServicesByName: TDictionary<string, TService>;
-    FServicesList: TObjectList<TService>;
+    FServicesByName: TDictionary<string, TDSMService>;
+    FServicesList: TObjectList<TDSMService>;
     function CheckOS: Boolean;
     function GetActive: Boolean;
-    function GetService(const AIndex: Integer): TService;
+    function GetService(const AIndex: Integer): TDSMService;
     function GetServiceCount: Integer;
-    function InitializeSingleService(const AServiceName: string): TService;
-    procedure AddServiceToLists(const AService: TService);
+    function InitializeSingleService(const AServiceName: string): TDSMService;
+    procedure AddServiceToLists(const AService: TDSMService);
     procedure CleanupServices;
     procedure EnumerateAndAddServices(const AServices: PEnumServiceStatus; const AByesNeeded: DWORD);
     procedure ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
@@ -159,13 +161,13 @@ type
     function GetError: Boolean;
     function GetErrorMessage: string;
   protected
-    { using classic protected visibility to give TService access to TServiceManager services that are not public }
+    { using classic protected visibility to give TDSMService access to TDSMServiceManager services that are not public }
     function GetManagerHandle: SC_HANDLE;
     function Lock: Boolean;
     function Unlock: Boolean;
     procedure HandleError(const AErrorCode: Integer; const AForceException: Boolean = False);
     procedure ResetLastError;
-    procedure SortArray(var AServiceArray: TArray<TService>);
+    procedure SortArray(var AServiceArray: TArray<TDSMService>);
   public
     constructor Create(const AHostName: string = ''; const AGetServiceListOnActive: Boolean = True;
       const ARaiseExceptions: Boolean = True; const AAllowLocking: Boolean = False);
@@ -182,9 +184,9 @@ type
     function RebuildServicesList: Boolean;
     { Find services by name (case insensitive). Works only while active. If no service can be found
       an exception will be raised. }
-    function ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TService;
+    function ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TDSMService;
     { Get array of services, sorted by display name, Service manager owns objects, so handle with care. }
-    function GetServicesByDisplayName: TArray<TService>;
+    function GetServicesByDisplayName: TArray<TDSMService>;
     { Delete a service... }
     // procedure DeleteService(Index: Integer);
     { Get the number of services. This number is refreshed when the @link(Active) is
@@ -193,14 +195,14 @@ type
     { Find a service by index in the services list. This list is refreshed when the @link(Active) is
       set to True or @link(RebuildServicesList) is called. Works only while active. Valid Index
       values are 0..@link(ServiceCount) - 1. }
-    property Services[const AIndex: Integer]: TService read GetService;
+    property Services[const AIndex: Integer]: TDSMService read GetService;
     { Activate / deactivate the service manager. In active state can you access the individual
       service, check RaiseExceptions property and open and close methods, thiose will affect on how this property
       works }
     property Active: Boolean read GetActive write SetActive;
     { The machine name for which you want the services list. }
     property HostName: string read FHostName write SetHostName;
-    { Allow locking... Is needed only when changing several properties in TService.
+    { Allow locking... Is needed only when changing several properties in TDSMService.
       Property can only be set while inactive. }
     property AllowLocking: Boolean read FAllowLocking write SetAllowLocking;
     { Raise Exceptions, if all functions should return False if it fails, then more info at Last*Error* properties}
@@ -220,9 +222,9 @@ implementation
 uses
   System.Generics.Defaults, System.SysConst, Windows.ServiceManager.Consts;
 
-{ Helper for TServiceState }
+{ Helper for TDSMServiceState }
 
-function TServiceStateHelper.ToString: string;
+function TDSMServiceStateHelper.ToString: string;
 begin
   Result := '';
 
@@ -240,9 +242,9 @@ begin
   end;
 end;
 
-{ Helper for TServiceStartup }
+{ Helper for TDSMServiceStartup }
 
-function TServiceStartupHelper.ToString: string;
+function TDSMServiceStartupHelper.ToString: string;
 begin
   case Self of
     ssAutomatic:Result := 'Automatic';
@@ -255,9 +257,9 @@ begin
 end;
 
 
-{ TServiceManager }
+{ TDSMServiceManager }
 
-function TServiceManager.RebuildServicesList: Boolean;
+function TDSMServiceManager.RebuildServicesList: Boolean;
 var
   LIndex: NativeUInt;
   LServices: PEnumServiceStatus;
@@ -320,7 +322,7 @@ begin
   Result := True;
 end;
 
-procedure TServiceManager.ResetLastError;
+procedure TDSMServiceManager.ResetLastError;
 begin
   FLastErrorCode := 0;
   FLastSystemErrorCode := 0;
@@ -328,13 +330,13 @@ begin
   FLastSystemErrorMessage := '';
 end;
 
-procedure TServiceManager.AddServiceToLists(const AService: TService);
+procedure TDSMServiceManager.AddServiceToLists(const AService: TDSMService);
 begin
   AService.FIndex := FServicesList.Add(AService);
   FServicesByName.Add(AService.Info.FName.ToLower, AService);
 end;
 
-procedure TServiceManager.BeginLockingProcess(const AActivateServiceManager: Boolean = True);
+procedure TDSMServiceManager.BeginLockingProcess(const AActivateServiceManager: Boolean = True);
 begin
   AllowLocking := True;
 
@@ -342,7 +344,7 @@ begin
     Active := True;
 end;
 
-function TServiceManager.CheckOS: Boolean;
+function TDSMServiceManager.CheckOS: Boolean;
 var
   LVersionInfo: TOSVersionInfo;
 begin
@@ -368,13 +370,13 @@ begin
   Result := True;
 end;
 
-procedure TServiceManager.CleanupServices;
+procedure TDSMServiceManager.CleanupServices;
 begin
   FServicesList.Clear;
   FServicesByName.Clear;
 end;
 
-function TServiceManager.Close: Boolean;
+function TDSMServiceManager.Close: Boolean;
 begin
   if not Active then
     Exit(True);
@@ -394,13 +396,13 @@ begin
   Result := not GetActive;
 end;
 
-constructor TServiceManager.Create(const AHostName: string = ''; const AGetServiceListOnActive: Boolean = True;
+constructor TDSMServiceManager.Create(const AHostName: string = ''; const AGetServiceListOnActive: Boolean = True;
   const ARaiseExceptions: Boolean = True; const AAllowLocking: Boolean = False);
 begin
   inherited Create;
 
-  FServicesList := TObjectList<TService>.Create(True);
-  FServicesByName := TDictionary<string, TService>.Create;
+  FServicesList := TObjectList<TDSMService>.Create(True);
+  FServicesByName := TDictionary<string, TDSMService>.Create;
   ResetLastError;
   FManagerHandle := 0;
   FHostName := AHostName;
@@ -409,7 +411,7 @@ begin
   FAllowLocking := AAllowLocking;
 end;
 
-destructor TServiceManager.Destroy;
+destructor TDSMServiceManager.Destroy;
 begin
   Active := False;
 
@@ -419,7 +421,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TServiceManager.EndLockingProcess;
+procedure TDSMServiceManager.EndLockingProcess;
 begin
   if Active then
     Active := False;
@@ -427,7 +429,7 @@ begin
   AllowLocking := False;
 end;
 
-procedure TServiceManager.EnumerateAndAddServices(const AServices: PEnumServiceStatus; const AByesNeeded: DWORD);
+procedure TDSMServiceManager.EnumerateAndAddServices(const AServices: PEnumServiceStatus; const AByesNeeded: DWORD);
 var
   LIndex: DWORD;
   LServicesLoopPointer: PEnumServiceStatus;
@@ -457,17 +459,17 @@ begin
   end;
 end;
 
-function TServiceManager.GetActive: Boolean;
+function TDSMServiceManager.GetActive: Boolean;
 begin
   Result := FManagerHandle <> 0;
 end;
 
-function TServiceManager.GetError: Boolean;
+function TDSMServiceManager.GetError: Boolean;
 begin
   Result := (FLastErrorCode <> 0) or (FLastSystemErrorCode <> 0);
 end;
 
-function TServiceManager.GetErrorMessage: string;
+function TDSMServiceManager.GetErrorMessage: string;
 begin
   Result := '';
 
@@ -477,17 +479,17 @@ begin
     Result := Format('System error (%d) with message:', [FLastSystemErrorCode, FLastSystemErrorMessage]);
 end;
 
-function TServiceManager.GetManagerHandle: SC_HANDLE;
+function TDSMServiceManager.GetManagerHandle: SC_HANDLE;
 begin
   Result := FManagerHandle;
 end;
 
-function TServiceManager.GetService(const AIndex: Integer): TService;
+function TDSMServiceManager.GetService(const AIndex: Integer): TDSMService;
 begin
   Result := FServicesList[AIndex];
 end;
 
-function TServiceManager.ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TService;
+function TDSMServiceManager.ServiceByName(const AServiceName: string; const AAllowUnknown: Boolean = False): TDSMService;
 begin
   if not FServicesByName.TryGetValue(AServiceName.ToLower, Result) then
   begin
@@ -511,21 +513,21 @@ begin
   end;
 end;
 
-function TServiceManager.GetServiceCount: Integer;
+function TDSMServiceManager.GetServiceCount: Integer;
 begin
   Result := FServicesList.Count;
 end;
 
-function TServiceManager.GetServicesByDisplayName: TArray<TService>;
+function TDSMServiceManager.GetServicesByDisplayName: TArray<TDSMService>;
 begin
   Result := FServicesList.ToArray;
 
   SortArray(Result);
 end;
 
-procedure TServiceManager.HandleError(const AErrorCode: Integer; const AForceException: Boolean = False);
+procedure TDSMServiceManager.HandleError(const AErrorCode: Integer; const AForceException: Boolean = False);
 var
-  LErrorInfo: TErrorInfo;
+  LErrorInfo: TDSMErrorInfo;
   LOSError: EOSError;
 begin
   if AErrorCode = LAST_OS_ERROR then
@@ -561,9 +563,9 @@ begin
   end;
 end;
 
-function TServiceManager.InitializeSingleService(const AServiceName: string): TService;
+function TDSMServiceManager.InitializeSingleService(const AServiceName: string): TDSMService;
 begin
-  Result := TService.Create(Self);
+  Result := TDSMService.Create(Self);
   try
     if not Result.InitializeByName(AServiceName) then
       FreeAndNil(Result);
@@ -572,11 +574,11 @@ begin
   end;
 end;
 
-procedure TServiceManager.ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
+procedure TDSMServiceManager.ServiceToLists(const AServiceEnumStatus:  ENUM_SERVICE_STATUS);
 var
-  LService: TService;
+  LService: TDSMService;
 begin
-  LService := TService.Create(Self);
+  LService := TDSMService.Create(Self);
   LService.FInfo.FName := AServiceEnumStatus.lpServiceName;
   LService.FInfo.FDisplayName := AServiceEnumStatus.lpDisplayName;
   LService.FInfo.FStatus := AServiceEnumStatus.ServiceStatus;
@@ -587,7 +589,7 @@ begin
   AddServiceToLists(LService);
 end;
 
-procedure TServiceManager.SetActive(const ASetToActive: Boolean);
+procedure TDSMServiceManager.SetActive(const ASetToActive: Boolean);
 begin
   if ASetToActive then
     Open
@@ -595,7 +597,7 @@ begin
     Close;
 end;
 
-procedure TServiceManager.SetHostName(const AHostName: string);
+procedure TDSMServiceManager.SetHostName(const AHostName: string);
 begin
   if Active then
   begin
@@ -606,10 +608,10 @@ begin
   FHostName := AHostName;
 end;
 
-procedure TServiceManager.SortArray(var AServiceArray: TArray<TService>);
+procedure TDSMServiceManager.SortArray(var AServiceArray: TArray<TDSMService>);
 begin
-  TArray.Sort<TService>(AServiceArray, TDelegatedComparer<TService>.Construct(
-    function(const ALeft, ARight:TService): Integer
+  TArray.Sort<TDSMService>(AServiceArray, TDelegatedComparer<TDSMService>.Construct(
+    function(const ALeft, ARight:TDSMService): Integer
     begin
       Result := TComparer<string>.Default.Compare(ALeft.FInfo.FDisplayName, ARight.FInfo.FDisplayName);
     end)
@@ -617,14 +619,14 @@ begin
 end;
 
 (*
-procedure TServiceManager.DeleteService(Index: Integer);
+procedure TDSMServiceManager.DeleteService(Index: Integer);
 begin
   // todo: implementation
   raise Exception.Create('Not implemented');
 end;
 *)
 
-function TServiceManager.Lock: Boolean;
+function TDSMServiceManager.Lock: Boolean;
 begin
   Result := False;
 
@@ -647,7 +649,7 @@ begin
     Result := True;
 end;
 
-function TServiceManager.Open: Boolean;
+function TDSMServiceManager.Open: Boolean;
 var
   LDesiredAccess: DWORD;
 begin
@@ -677,7 +679,7 @@ begin
     Result := RebuildServicesList;
 end;
 
-function TServiceManager.Unlock: Boolean;
+function TDSMServiceManager.Unlock: Boolean;
 begin
   // We are unlocked already
   if FLockHandle = nil then
@@ -697,7 +699,7 @@ begin
   Result := FLockHandle = nil;
 end;
 
-procedure TServiceManager.SetAllowLocking(const AValue: Boolean);
+procedure TDSMServiceManager.SetAllowLocking(const AValue: Boolean);
 begin
   if Active then
   begin
@@ -708,9 +710,9 @@ begin
   FAllowLocking := AValue;
 end;
 
-{ TService }
+{ TDSMService }
 
-procedure TService.CleanupHandle;
+procedure TDSMService.CleanupHandle;
 begin
   if FServiceHandle = 0 then
     Exit;
@@ -720,7 +722,7 @@ begin
   FServiceHandleAccess := 0;
 end;
 
-constructor TService.Create(const AParentServiceManager: TServiceManager);
+constructor TDSMService.Create(const AParentServiceManager: TDSMServiceManager);
 begin
   inherited Create;
 
@@ -732,17 +734,17 @@ begin
   FInfo.FLive := False;
 end;
 
-function TService.DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceCount: Integer): TArray<TService>;
+function TDSMService.DependenciesToList(const AQServicesStatus: PEnumServiceStatus; const AServiceCount: Integer): TArray<TDSMService>;
 var
   LServiceName: string;
   LIndex: Integer;
   LLoopStatusPointer: PEnumServiceStatus;
-  LServiceInfo: TService;
-  LDependentSerevices: TList<TService>;
+  LServiceInfo: TDSMService;
+  LDependentSerevices: TList<TDSMService>;
 begin
   Result := [];
 
-  LDependentSerevices := TList<TService>.Create;
+  LDependentSerevices := TList<TDSMService>.Create;
   try
     LLoopStatusPointer := AQServicesStatus;
 
@@ -781,7 +783,7 @@ begin
   end;
 end;
 
-function TService.Dependents: TArray<TService>;
+function TDSMService.Dependents: TArray<TDSMService>;
 var
   LServicesStatus: PEnumServiceStatus;
   LBytesNeeded: DWORD;
@@ -825,14 +827,14 @@ begin
   end;
 end;
 
-destructor TService.Destroy;
+destructor TDSMService.Destroy;
 begin
   CleanupHandle;
 
   inherited Destroy;
 end;
 
-function TService.GetHandle(const AAccess: DWORD): Boolean;
+function TDSMService.GetHandle(const AAccess: DWORD): Boolean;
 begin
   if HandleOK then
   begin
@@ -859,7 +861,7 @@ begin
     FServiceHandleAccess := AAccess;
 end;
 
-function TService.GetState: TServiceState;
+function TDSMService.GetState: TDSMServiceState;
 begin
   if FInfo.FLive then
     QueryStatus;
@@ -867,12 +869,12 @@ begin
   Result := InternalServiceStateToState(FInfo.FStatus.dwCurrentState);
 end;
 
-function TService.HandleOK: Boolean;
+function TDSMService.HandleOK: Boolean;
 begin
   Result := FServiceHandle <> 0;
 end;
 
-function TService.InitializeByName(const AServiceName: string): Boolean;
+function TDSMService.InitializeByName(const AServiceName: string): Boolean;
 begin
   FInfo.FName := AServiceName;
 
@@ -882,7 +884,7 @@ begin
     Result := QueryStatus;
 end;
 
-function TService.InternalServiceStateToState(const ACurrentState: DWORD): TServiceState;
+function TDSMService.InternalServiceStateToState(const ACurrentState: DWORD): TDSMServiceState;
 begin
   case ACurrentState of
     SERVICE_STOPPED: Result := ssStopped;
@@ -900,7 +902,7 @@ begin
   end;
 end;
 
-function TService.QueryStatus: Boolean;
+function TDSMService.QueryStatus: Boolean;
 var
   LStatus: TServiceStatus;
 begin
@@ -935,7 +937,7 @@ begin
   Result := True;
 end;
 
-function TService.Continue(const AWait: Boolean = True): Boolean;
+function TDSMService.Continue(const AWait: Boolean = True): Boolean;
 var
   LStatus: TServiceStatus;
 begin
@@ -965,7 +967,7 @@ begin
   end;
 end;
 
-procedure TService.ParseBinaryPath;
+procedure TDSMService.ParseBinaryPath;
 var
   LCommanlineStart: Integer;
 begin
@@ -994,7 +996,7 @@ begin
   end;
 end;
 
-function TService.Pause(const AWait: Boolean = True): Boolean;
+function TDSMService.Pause(const AWait: Boolean = True): Boolean;
 var
   LStatus: TServiceStatus;
 begin
@@ -1024,7 +1026,7 @@ begin
   end;
 end;
 
-function TService.Start(const AWait: Boolean = True): Boolean;
+function TDSMService.Start(const AWait: Boolean = True): Boolean;
 var
   LServiceArgumentVectors: PChar;
 begin
@@ -1049,7 +1051,7 @@ begin
   end;
 end;
 
-function TService.Stop(const AWait: Boolean = True): Boolean;
+function TDSMService.Stop(const AWait: Boolean = True): Boolean;
 var
   LStatus: TServiceStatus;
 begin
@@ -1079,7 +1081,7 @@ begin
   end;
 end;
 
-function TService.WaitFor(const AState: DWORD): Boolean;
+function TDSMService.WaitFor(const AState: DWORD): Boolean;
 var
   LOldCheckPoint: DWORD;
   LWait: DWORD;
@@ -1111,7 +1113,7 @@ begin
   Result := AState = FInfo.FStatus.dwCurrentState;
 end;
 
-function TService.WaitForPendingServiceState(const AServiceState: TServiceState): Boolean;
+function TDSMService.WaitForPendingServiceState(const AServiceState: TDSMServiceState): Boolean;
 begin
   case AServiceState of
     ssStartPending: Result := WaitFor(SERVICE_RUNNING);
@@ -1123,7 +1125,7 @@ begin
   end;
 end;
 
-function TService.QueryConfig: Boolean;
+function TDSMService.QueryConfig: Boolean;
 var
   LBuffer: PByte;
   LServiceConfig: LPQUERY_SERVICE_CONFIG;
@@ -1201,62 +1203,62 @@ begin
   end;
 end;
 
-procedure TService.RefreshIfNeeded;
+procedure TDSMService.RefreshIfNeeded;
 begin
   if FInfo.FLive or not FConfigQueried then
     QueryConfig;
 end;
 
-function TService.GetOwnProcess: Boolean;
+function TDSMService.GetOwnProcess: Boolean;
 begin
   RefreshIfNeeded;
 
   Result := FInfo.FOwnProcess;
 end;
 
-function TService.GetPath: string;
+function TDSMService.GetPath: string;
 begin
   RefreshIfNeeded;
 
   Result := FInfo.FPath;
 end;
 
-function TService.GetInteractive: Boolean;
+function TDSMService.GetInteractive: Boolean;
 begin
   RefreshIfNeeded;
 
   Result := FInfo.FInteractive;
 end;
 
-function TService.GetStartType: TServiceStartup;
+function TDSMService.GetStartType: TDSMServiceStartup;
 begin
   RefreshIfNeeded;
 
   Result := FInfo.StartType;
 end;
 
-function TService.GetBinaryPathName: string;
+function TDSMService.GetBinaryPathName: string;
 begin
   RefreshIfNeeded;
 
   Result := FInfo.FBinaryPathName;
 end;
 
-function TService.GetCommandLine: string;
+function TDSMService.GetCommandLine: string;
 begin
   RefreshIfNeeded;
 
   Result := FInfo.FCommandLine;
 end;
 
-function TService.GetFileName: string;
+function TDSMService.GetFileName: string;
 begin
   RefreshIfNeeded;
 
   Result := FInfo.FFileName;
 end;
 
-function TService.GetServiceAccepts: TServiceAccepts;
+function TDSMService.GetServiceAccepts: TDSMServiceAccepts;
 begin
   Result := [];
 
@@ -1273,7 +1275,7 @@ begin
     Result := Result + [saShutdown];
 end;
 
-function TService.GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TServiceStartup): Boolean;
+function TDSMService.GetServiceStartType(const AServiceConfig: QUERY_SERVICE_CONFIG; var AStartType: TDSMServiceStartup): Boolean;
 begin
   Result := True;
 
@@ -1289,9 +1291,9 @@ begin
   end;
 end;
 
-procedure TService.SetState(const AServiceState: TServiceState);
+procedure TDSMService.SetState(const AServiceState: TDSMServiceState);
 var
-  LOldState: TServiceState;
+  LOldState: TDSMServiceState;
 begin
   // Make sure we have the latest current state and that it is not a transitional state.
   if not FInfo.FLive then
@@ -1336,10 +1338,10 @@ begin
 end;
 
 
-procedure TService.SetStartType(const AValue: TServiceStartup);
+procedure TDSMService.SetStartType(const AValue: TDSMServiceStartup);
 const
   SERVICE_AUTO_START_DELAYED = 0; // dummy
-  NEW_START_TYPES: array [TServiceStartup] of DWORD = (SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED, SERVICE_AUTO_START_DELAYED);
+  NEW_START_TYPES: array [TDSMServiceStartup] of DWORD = (SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED, SERVICE_AUTO_START_DELAYED);
 begin
   // Check if it is not a change?
   QueryConfig;
@@ -1376,7 +1378,7 @@ begin
   end;
 end;
 
-procedure TService.SetDelayedAutoStart(const AValue: Boolean);
+procedure TDSMService.SetDelayedAutoStart(const AValue: Boolean);
 var
   DelayedInfo: SERVICE_DELAYED_AUTO_START_INFO;
 begin

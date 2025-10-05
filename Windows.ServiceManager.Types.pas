@@ -22,14 +22,14 @@ type
   ECannotSetTransitionalState = class(ECustomServiceManagerException);
   EServiceAccessDiffers = class(ECustomServiceManagerException);
 
-  TErrorInfo = record
+  TDSMErrorInfo = record
     ErrorCode: Integer;
     ExceptionClass: ExceptClass;
     ErrorMessage: string;
   end;
 
   { The states a service can be in. }
-  TServiceState = (ssStopped,
+  TDSMServiceState = (ssStopped,
                    ssStartPending,
                    ssStopPending,
                    ssRunning,
@@ -39,22 +39,21 @@ type
 
   { Enumeration of the standard "controls" a service can accept. The shutdown control, if not
     accepted is ignored. The shutdown control can only be sent when a shutdown occurs. }
-  TServiceAccept = (saStop,
+  TDSMServiceAccept = (saStop,
                     saPauseContinue,
                     saShutdown);
 
   { The set of "controls" a service can accept. }
-  TServiceAccepts = set of TServiceAccept;
+  TDSMServiceAccepts = set of TDSMServiceAccept;
 
   { The service startup enumeration determines how a service is started. ssAutomatic will start the
     service automatically at startup. ssManual will allow applications and other services to start
     this service manually and ssDisabled will disallow the service to be started altogether (but it
     will be kept in the service database). }
-  TServiceStartup = (ssAutomatic,
+  TDSMServiceStartup = (ssAutomatic,
                      ssAutomaticDelayed,
                      ssManual,
                      ssDisabled);
-
 
 implementation
 

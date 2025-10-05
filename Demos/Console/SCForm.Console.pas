@@ -75,9 +75,9 @@ end;
 procedure TSCConsoleForm.PopulateTheGrid;
 var
   LRow: NativeUInt;
-  LServiceManager: TServiceManager;
+  LServiceManager: TDSMServiceManager;
 begin
-  LServiceManager := TServiceManager.Create;
+  LServiceManager := TDSMServiceManager.Create;
   try
     LServiceManager.Open;
 
