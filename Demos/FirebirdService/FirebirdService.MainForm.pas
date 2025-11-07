@@ -101,7 +101,7 @@ const
 var
   LDepedencies: TArray<TDSMService>;
   LService: TDSMService;
-  LDependantService: TDSMService;
+  LDependentService: TDSMService;
   LDepedencyCount: Integer;
 begin
   LDepedencyCount := 0;
@@ -118,11 +118,11 @@ begin
     try
       LDepedencies := LService.Dependents;
 
-      for LDependantService in LDepedencies do
+      for LDependentService in LDepedencies do
       begin
-        if Assigned(LDependantService) then
+        if Assigned(LDependentService) then
         begin
-          Log(GetServiceNamesString(LDependantService), 1);
+          Log(GetServiceNamesString(LDependentService), 1);
           Inc(LDepedencyCount);
         end;
       end;
