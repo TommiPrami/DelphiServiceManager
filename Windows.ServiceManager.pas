@@ -39,7 +39,7 @@ type
     FDescription: string; { Description of this service. }
     FDisplayName: string; { Display name of this service }
     FFileName: string;
-    FInteractive: Boolean; { Is the service capable of interacting with the desktop. Possible: The logon must the Local System Account. }
+    FInteractive: Boolean; { Is the service capable of interacting with the desktop. Possible: The login must the Local System Account. }
     FLive: Boolean; { Are various properties using live information or historic information. }
     FName: string; { Name of this service. }
     FOwnProcess: Boolean; { When service is running, does it run as a separate process (own process) or combined with other services under svchost. }
@@ -54,7 +54,7 @@ type
     property Description: string read FDescription; { Description of this service. }
     property DisplayName: string read FDisplayName; { Display name of this service }
     property FileName: string read FFileName;
-    property Interactive: Boolean read FInteractive; { Is the service capable of interacting with the desktop. Possible: The logon must the Local System Account. }
+    property Interactive: Boolean read FInteractive; { Is the service capable of interacting with the desktop. Possible: The login must the Local System Account. }
     property Live: Boolean read FLive; { Are various properties using live information or historic information. }
     property Name: string read FName; { Name of this service. }
     property OwnProcess: Boolean read FOwnProcess; { When service is running, does it run as a separate process (own process) or combined with other services under svchost. }
@@ -292,7 +292,7 @@ begin
       this is
         "if EnumServicesStatus()" NOT -> "if not EnumServicesStatus()" -case
 
-      If needs nore memory, continue, if error is something ense, handled below.
+      If needs more memory, continue, if error is something ense, handled below.
     }
     Exit;
   end;
