@@ -1,4 +1,4 @@
-unit SCForm.Console;
+﻿unit SCForm.Console;
 
 interface
 
