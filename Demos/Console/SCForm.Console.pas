@@ -45,7 +45,7 @@ begin
       LCellWidth := Grid.Canvas.TextWidth(Grid.Cells[LCol, LRow]);
 
       if LCellWidth > LColWidth then
-        LColWidth := LCellWidth
+        LColWidth := LCellWidth;
     end;
 
     Grid.ColWidths[LCol] := LColWidth + MIN_COL_WIDTH;
