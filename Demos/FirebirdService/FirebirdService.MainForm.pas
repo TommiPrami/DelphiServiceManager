@@ -28,9 +28,9 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   strict private
-    FServciceManager: TDSMServiceManager;
+    FServiceManager: TDSMServiceManager;
     function GetLogIndent(const AIndent: Integer): string;
-    function GetServiceNamesString(const AServiceInfo: TDSMService): string;
+    function GetServiceNamesString(const AService: TDSMService): string;
     function RemoveLineBreaks(const AMessage: string): string;
     procedure ActivateOrRefreshServiceManager(const AGetServiceListOnActive: Boolean);
     procedure Log(const AException: Exception; const AIndent: Integer = 0); overload;
@@ -54,13 +54,13 @@ const
 
 procedure TFormFirebirdServiceMain.ActivateOrRefreshServiceManager(const AGetServiceListOnActive: Boolean);
 begin
-  if not FServciceManager.Active then
+  if not FServiceManager.Active then
   begin
-    FServciceManager.GetServiceListOnActive := AGetServiceListOnActive;
-    FServciceManager.Active := True
+    FServiceManager.GetServiceListOnActive := AGetServiceListOnActive;
+    FServiceManager.Active := True
   end
   else
-    FServciceManager.RebuildServicesList;
+    FServiceManager.RebuildServicesList;
 end;
 
 procedure TFormFirebirdServiceMain.ButtonEnumerateServicesClick(Sender: TObject);
@@ -73,7 +73,7 @@ begin
   try
     ActivateOrRefreshServiceManager(True);
 
-    LServices := FServciceManager.GetServicesByDisplayName;
+    LServices := FServiceManager.GetServicesByDisplayName;
 
     MemoLog.Lines.BeginUpdate;
     try
@@ -99,36 +99,36 @@ procedure TFormFirebirdServiceMain.ButtonEumerateWindowsAudioServiceDependencies
 const
   WINDOWS_AUDIO_SERVICE_NAME = 'Audiosrv';
 var
-  LDepedencies: TArray<TDSMService>;
+  LDependencies: TArray<TDSMService>;
   LService: TDSMService;
   LDependentService: TDSMService;
-  LDepedencyCount: Integer;
+  LDependencyCount: Integer;
 begin
-  LDepedencyCount := 0;
+  LDependencyCount := 0;
 
   try
     ActivateOrRefreshServiceManager(True);
 
-    LService := FServciceManager.ServiceByName(WINDOWS_AUDIO_SERVICE_NAME);
+    LService := FServiceManager.ServiceByName(WINDOWS_AUDIO_SERVICE_NAME);
     if not Assigned(LService) then
       raise Exception.Create('Service not found');
 
-    Log('Eumerate "' + LService.Info.DisplayName + '" service Dependencies...');
+    Log('Enumerate "' + LService.Info.DisplayName + '" service Dependencies...');
     MemoLog.Lines.BeginUpdate;
     try
-      LDepedencies := LService.Dependents;
+      LDependencies := LService.Dependents;
 
-      for LDependentService in LDepedencies do
+      for LDependentService in LDependencies do
       begin
         if Assigned(LDependentService) then
         begin
           Log(GetServiceNamesString(LDependentService), 1);
-          Inc(LDepedencyCount);
+          Inc(LDependencyCount);
         end;
       end;
 
       Log('', 0);
-      Log('Dependent service(s) Count: ' + LDepedencyCount.ToString, 1);
+      Log('Dependent service(s) Count: ' + LDependencyCount.ToString, 1);
    finally
       MemoLog.Lines.EndUpdate;
     end;
@@ -142,17 +142,17 @@ end;
 
 procedure TFormFirebirdServiceMain.ButtonFixFirebirdServiceClick(Sender: TObject);
 var
-  LServciceManager: TDSMServiceManager;
+  LServiceManager: TDSMServiceManager;
   LFirebirdService: TDSMService;
 begin
   Log('Fixing Firebird service...');
 
-  LServciceManager := TDSMServiceManager.Create;
+  LServiceManager := TDSMServiceManager.Create;
   try
     try
       try
-        LServciceManager.BeginLockingProcess;
-        LFirebirdService := LServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
+        LServiceManager.BeginLockingProcess;
+        LFirebirdService := LServiceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
         if LFirebirdService.State = ssRunning then
         begin
@@ -174,10 +174,10 @@ begin
 
         Log('Service state: ' + LFirebirdService.State.ToString, 1);
       finally
-        LServciceManager.EndLockingProcess;
+        LServiceManager.EndLockingProcess;
       end;
     finally
-      LServciceManager.Free;
+      LServiceManager.Free;
     end;
 
     Log('');
@@ -197,7 +197,7 @@ begin
   try
     ActivateOrRefreshServiceManager(False);
 
-    LFirebirdService := FServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
+    LFirebirdService := FServiceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
     LServiceRunning := LFirebirdService.State = ssRunning;
     Log(IfThen(LServiceRunning, 'Firebird Service Running', 'Firebird Service NOT Running'), 1);
@@ -223,7 +223,7 @@ begin
   try
    ActivateOrRefreshServiceManager(True);
 
-    LFirebirdService := FServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
+    LFirebirdService := FServiceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
     if LFirebirdService.State <> ssRunning then
     begin
@@ -251,7 +251,7 @@ begin
   try
     ActivateOrRefreshServiceManager(True);
 
-    LFirebirdService := FServciceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
+    LFirebirdService := FServiceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 
     if LFirebirdService.State <> ssStopped then
     begin
@@ -272,19 +272,19 @@ end;
 
 procedure TFormFirebirdServiceMain.ButtonTestErrorHandlerClick(Sender: TObject);
 var
-  LServciceManager: TDSMServiceManager;
+  LServiceManager: TDSMServiceManager;
   LExceptionRaised: Boolean;
 begin
   Log('Testing error handler...');
 
   Log('Raise Exceptions', 1);
-  LServciceManager := TDSMServiceManager.Create;
+  LServiceManager := TDSMServiceManager.Create;
   try
     try
       LExceptionRaised := False;
-      LServciceManager.RaiseExceptions := True;
+      LServiceManager.RaiseExceptions := True;
 
-      LServciceManager.RebuildServicesList;
+      LServiceManager.RebuildServicesList;
     except
       on E: Exception do
       begin
@@ -293,15 +293,15 @@ begin
       end;
     end;
 
-    if not LExceptionRaised or (LServciceManager.LastErrorCode = 0) or (LServciceManager.LAstErrorMessage.IsEmpty) then
+    if not LExceptionRaised or (LServiceManager.LastErrorCode = 0) or (LServiceManager.LastErrorMessage.IsEmpty) then
       raise Exception.Create('Error handler did not work');
 
     Log('Do not raise Exceptions', 1);
     try
       LExceptionRaised := False;
-      LServciceManager.RaiseExceptions := False;
+      LServiceManager.RaiseExceptions := False;
 
-      LServciceManager.RebuildServicesList;
+      LServiceManager.RebuildServicesList;
     except
       on E: Exception do
       begin
@@ -310,12 +310,12 @@ begin
       end;
     end;
 
-    if LExceptionRaised or (LServciceManager.LastErrorCode = 0) or (LServciceManager.LAstErrorMessage.IsEmpty) then
+    if LExceptionRaised or (LServiceManager.LastErrorCode = 0) or (LServiceManager.LastErrorMessage.IsEmpty) then
       raise Exception.Create('Error handler did not work')
     else
-      Log(LServciceManager.LastErrorMessage, 2);
+      Log(LServiceManager.LastErrorMessage, 2);
   finally
-    LServciceManager.Free;
+    LServiceManager.Free;
   end;
 
   Log('');
@@ -323,12 +323,12 @@ end;
 
 procedure TFormFirebirdServiceMain.FormCreate(Sender: TObject);
 begin
-  FServciceManager := TDSMServiceManager.Create;
+  FServiceManager := TDSMServiceManager.Create;
 end;
 
 procedure TFormFirebirdServiceMain.FormDestroy(Sender: TObject);
 begin
-  FServciceManager.Free;
+  FServiceManager.Free;
 end;
 
 function TFormFirebirdServiceMain.GetLogIndent(const AIndent: Integer): string;
@@ -339,9 +339,9 @@ begin
     Result := '';
 end;
 
-function TFormFirebirdServiceMain.GetServiceNamesString(const AServiceInfo: TDSMService): string;
+function TFormFirebirdServiceMain.GetServiceNamesString(const AService: TDSMService): string;
 begin
-  Result := AServiceInfo.Info.DisplayName + ' (' + AServiceInfo.Info.Name + ')';
+  Result := AService.Info.DisplayName + ' (' + AService.Info.Name + ')';
 end;
 
 procedure TFormFirebirdServiceMain.Log(const AMessage: string; const AIndent: Integer = 0);

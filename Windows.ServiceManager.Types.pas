@@ -18,7 +18,7 @@ type
   EServiceCannotBePaused = class(ECustomServiceManagerException);
   EServiceCannotBeStopped = class(ECustomServiceManagerException);
   EServiceDidNotRespond = class(ECustomServiceManagerException);
-  EServiceServiceStartTypeUnknown = class(ECustomServiceManagerException);
+  EServiceStartTypeUnknown = class(ECustomServiceManagerException);
   ECannotSetTransitionalState = class(ECustomServiceManagerException);
   EServiceAccessDiffers = class(ECustomServiceManagerException);
 

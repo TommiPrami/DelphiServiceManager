@@ -5,8 +5,8 @@
   - Ritsaert Hornstra
   - Darian Miller 
 
-Additiona work:
+Additional work:
   - [c-michail](https://github.com/c-michail)
   - Tommi Prami 
 
-Slapped on premissive **MIT licence if no objections (Original didn't have any)**.
+Slapped on a permissive **MIT license, if no objections (original didn't have any)**.
