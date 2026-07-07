@@ -20,9 +20,11 @@ object SCConsoleForm: TSCConsoleForm
     Width = 1151
     Height = 584
     Align = alClient
+    ColCount = 4
     DoubleBuffered = False
     ParentDoubleBuffered = False
     TabOrder = 0
+    OnDrawCell = ServicesGridDrawCell
     RowHeights = (
       24
       24

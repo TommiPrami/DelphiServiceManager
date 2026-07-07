@@ -12,6 +12,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormResize(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure ServicesGridDrawCell(Sender: TObject; ACol, ARow: LongInt; Rect: TRect; State: TGridDrawState);
   private
     procedure PopulateTheGrid;
   end;
@@ -30,9 +31,9 @@ procedure AutoSizeGridColumns(Grid: TStringGrid);
 const
   MIN_COL_WIDTH = 15;
 var
-  LCol: NativeUInt;
-  LColWidth, LCellWidth: NativeUInt;
-  LRow: NativeUInt;
+  LCol: Integer;
+  LColWidth, LCellWidth: Integer;
+  LRow: Integer;
 begin
   Grid.Canvas.Font.Assign(Grid.Font);
 
@@ -73,27 +74,43 @@ begin
 end;
 
 procedure TSCConsoleForm.PopulateTheGrid;
+
+  procedure SetGridCellValues(const ARow: Integer; const ANameColumn, ADescriptionColumn, AStateColumn, AStartTypeColumn: string);
+  begin
+    ServicesGrid.Cells[0, ARow] := ANameColumn;
+    ServicesGrid.Cells[1, ARow] := ADescriptionColumn;
+    ServicesGrid.Cells[2, ARow] := AStateColumn;
+    ServicesGrid.Cells[3, ARow] := AStartTypeColumn;
+  end;
 var
-  LRow: NativeUInt;
+  LRow: Integer;
   LServiceManager: TDSMServiceManager;
+  LCurrentService: TDSMService;
 begin
   LServiceManager := TDSMServiceManager.Create;
   try
     LServiceManager.Open;
 
-    ServicesGrid.RowCount := LServiceManager.ServiceCount;
+    ServicesGrid.RowCount := LServiceManager.ServiceCount + 1;
+
+    SetGridCellValues(0, 'Name', 'Description', 'State', 'Start type');
 
     for LRow := 0 to LServiceManager.ServiceCount -1 do
-    with ServicesGrid do
     begin
-      Cells[0, LRow] := LServiceManager.Services[LRow].Info.Name;
-      Cells[1, LRow] := LServiceManager.Services[LRow].Info.Description;
-      Cells[2, LRow] := LServiceManager.Services[LRow].Info.State.ToString;
-      Cells[3, LRow] := LServiceManager.Services[LRow].Info.StartType.ToString;
+      LCurrentService := LServiceManager.Services[LRow];
+
+      SetGridCellValues(LRow + 1, LCurrentService.Info.Name, LCurrentService.Info.Description, LCurrentService.Info.State.ToString,
+        LCurrentService.Info.StartType.ToString);
     end;
   finally
     FreeAndNil(LServiceManager);
   end;
+end;
+
+procedure TSCConsoleForm.ServicesGridDrawCell(Sender: TObject; ACol, ARow: LongInt; Rect: TRect; State: TGridDrawState);
+begin
+  // if ARow = 0 then
+    // State := [gdFixed];
 end;
 
 end.
