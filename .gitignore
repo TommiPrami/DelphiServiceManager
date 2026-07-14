@@ -70,3 +70,6 @@ __recovery/
 # Boss dependency manager vendor folder https://github.com/HashLoad/boss
 modules/
 *.dsv
+
+# TestInsight runtime settings, written next to the test executable
+TestInsightSettings.ini

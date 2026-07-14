@@ -86,7 +86,6 @@ type
     function WaitForPendingServiceState(const AServiceState: TDSMServiceState): Boolean;
     procedure CleanupHandle;
     procedure ParseBinaryPath;
-    procedure SetDelayedAutoStart(const AValue: Boolean);
     procedure SetLive(const AValue: Boolean);
     procedure SetStartType(const AValue: TDSMServiceStartup);
     procedure SetState(const AServiceState: TDSMServiceState);
@@ -102,7 +101,7 @@ type
     constructor Create(const AParentServiceManager: TDSMServiceManager);
     destructor Destroy; override;
 
-    { Get array of services that depent on this service }
+    { Get array of services that depend on this service }
     function Dependents: TArray<TDSMService>;
     { Action: Pause a running service. }
     function Pause(const AWait: Boolean = True): Boolean;
@@ -114,7 +113,7 @@ type
       You can use the @link(State) property to change the state from ssStopped to ssRunning }
     function Start(const AWait: Boolean = True): Boolean;
     { The current state of the service. You can set the service only to the non-transitional states.
-      You can restart the service by first setting the State to first ssStopped and second ssRunning. }
+      You can restart the service by setting the State first to ssStopped and then to ssRunning. }
     property State: TDSMServiceState read GetState write SetState;
     { How is this service started. See @link(TDSMServiceStartup) for a description of startup types.
       If you want to set this property, the manager must be activated with AllowLocking set to True. }
@@ -196,16 +195,17 @@ type
       set to True or @link(RebuildServicesList) is called. Works only while active. Valid Index
       values are 0..@link(ServiceCount) - 1. }
     property Services[const AIndex: Integer]: TDSMService read GetService;
-    { Activate / deactivate the service manager. In active state can you access the individual
-      service, check RaiseExceptions property and open and close methods, those will affect how this property
-      works }
+    { Activate / deactivate the service manager. In active state you can access the individual
+      services. Check the RaiseExceptions property and the Open and Close methods, those will affect
+      how this property works }
     property Active: Boolean read GetActive write SetActive;
     { The machine name for which you want the services list. }
     property HostName: string read FHostName write SetHostName;
     { Allow locking... Is needed only when changing several properties in TDSMService.
       Property can only be set while inactive. }
     property AllowLocking: Boolean read FAllowLocking write SetAllowLocking;
-    { Raise Exceptions, if all functions should return False if it fails, then more info at Last*Error* properties}
+    { When True (default) errors raise exceptions. When False, functions return False on failure,
+      and more info is available in the Last*Error* properties }
     property RaiseExceptions: Boolean read FRaiseExceptions write FRaiseExceptions;
     // Error properties, check HandleError()
     property Error: Boolean read GetError;
@@ -247,7 +247,7 @@ end;
 function TDSMServiceStartupHelper.ToString: string;
 begin
   case Self of
-    ssAutomatic:Result := 'Automatic';
+    ssAutomatic: Result := 'Automatic';
     ssManual: Result := 'Manual';
     ssDisabled: Result := 'Disabled';
     ssAutomaticDelayed: Result := 'Automatic (Delayed Start)';
@@ -346,23 +346,13 @@ begin
 end;
 
 function TDSMServiceManager.CheckOS: Boolean;
-var
-  LVersionInfo: TOSVersionInfo;
 begin
   Result := False;
 
   ResetLastError;
 
-  // Check that we are NT, 2000, XP or above, hopefully Always...
-  LVersionInfo.dwOSVersionInfoSize := SizeOf(LVersionInfo);
-
-  if not GetVersionEx(LVersionInfo) then
-  begin
-    HandleError(LAST_OS_ERROR);
-    Exit;
-  end;
-
-  if LVersionInfo.dwPlatformId <> VER_PLATFORM_WIN32_NT then
+  // Windows NT based OS required (Win9x/ME not supported), should be always True on anything modern...
+  if TOSVersion.Platform <> TOSVersion.TPlatform.pfWindows then
   begin
     HandleError(OS_NOT_SUPPORTED);
     Exit;
@@ -496,7 +486,7 @@ begin
   begin
     Result := nil;
 
-    if not FGetServiceListOnActive  then
+    if not FGetServiceListOnActive then
     begin
       if not Active then
       begin
@@ -613,7 +603,7 @@ end;
 procedure TDSMServiceManager.SortArray(var AServiceArray: TArray<TDSMService>);
 begin
   TArray.Sort<TDSMService>(AServiceArray, TDelegatedComparer<TDSMService>.Construct(
-    function(const ALeft, ARight:TDSMService): Integer
+    function(const ALeft, ARight: TDSMService): Integer
     begin
       Result := TComparer<string>.Default.Compare(ALeft.FInfo.FDisplayName, ARight.FInfo.FDisplayName);
     end)
@@ -666,7 +656,7 @@ begin
   // Open service manager
   LDesiredAccess := SC_MANAGER_CONNECT or SC_MANAGER_ENUMERATE_SERVICE;
   if FAllowLocking then
-    Inc(LDesiredAccess, SC_MANAGER_LOCK);
+    LDesiredAccess := LDesiredAccess or SC_MANAGER_LOCK;
 
   FManagerHandle := OpenSCManager(PChar(FHostName), nil, LDesiredAccess);
   if not Active then
@@ -676,7 +666,7 @@ begin
   end;
 
   // Fetch the services list
-  Result :=  GetActive;
+  Result := GetActive;
   if Result and FGetServiceListOnActive then
     Result := RebuildServicesList;
 end;
@@ -698,7 +688,7 @@ begin
   end;
 
   FLockHandle := nil;
-  Result := FLockHandle = nil;
+  Result := True;
 end;
 
 procedure TDSMServiceManager.SetAllowLocking(const AValue: Boolean);
@@ -949,6 +939,11 @@ begin
 
   if GetHandle(SERVICE_QUERY_STATUS or SERVICE_PAUSE_CONTINUE) then
   try
+    // Refresh the status, so the accepts check below reflects the current state of the service,
+    // not the snapshot taken when the services list was built.
+    if not QueryStatus then
+      Exit;
+
     if not (saPauseContinue in ServiceAccepts) then
     begin
       FServiceManager.HandleError(SERVICE_CANNOT_CONTINUE);
@@ -1014,6 +1009,11 @@ begin
 
   if GetHandle(SERVICE_QUERY_STATUS or SERVICE_PAUSE_CONTINUE) then
   try
+    // Refresh the status, so the accepts check below reflects the current state of the service,
+    // not the snapshot taken when the services list was built.
+    if not QueryStatus then
+      Exit;
+
     if not (saPauseContinue in ServiceAccepts) then
     begin
       FServiceManager.HandleError(SERVICE_CANNOT_PAUSE);
@@ -1069,6 +1069,11 @@ begin
 
   if GetHandle(SERVICE_QUERY_STATUS or SERVICE_STOP) then
   try
+    // Refresh the status, so the accepts check below reflects the current state of the service,
+    // not the snapshot taken when the services list was built.
+    if not QueryStatus then
+      Exit;
+
     if not (saStop in ServiceAccepts) then
     begin
       FServiceManager.HandleError(SERVICE_CANNOT_STOP);
@@ -1215,15 +1220,19 @@ begin
       FreeMem(LServiceConfig);
     end;
 
-    // Get DelayedAutoStart state
-    QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, nil, 0, @LBytesNeeded);
-    GetMem(LBuffer, LBytesNeeded);
-    try
-      if QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, LBuffer, LBytesNeeded, @LBytesNeeded) then
-        if LPSERVICE_DELAYED_AUTO_START_INFO(LBuffer).fDelayedAutostart then
-          FInfo.StartType := ssAutomaticDelayed;
-    finally
-      FreeMem(LBuffer);
+    { Get DelayedAutoStart state. The SCM keeps the delayed flag even when the start type is
+      changed away from automatic, so the flag is only meaningful for automatic start services. }
+    if FInfo.StartType = ssAutomatic then
+    begin
+      QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, nil, 0, @LBytesNeeded);
+      GetMem(LBuffer, LBytesNeeded);
+      try
+        if QueryServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, LBuffer, LBytesNeeded, @LBytesNeeded) then
+          if LPSERVICE_DELAYED_AUTO_START_INFO(LBuffer).fDelayedAutostart then
+            FInfo.StartType := ssAutomaticDelayed;
+      finally
+        FreeMem(LBuffer);
+      end;
     end;
 
     // Get Description
@@ -1347,14 +1356,18 @@ begin
   end;
 end;
 
-
 procedure TDSMService.SetStartType(const AValue: TDSMServiceStartup);
 const
-  SERVICE_AUTO_START_DELAYED = 0; // dummy
-  NEW_START_TYPES: array [TDSMServiceStartup] of DWORD = (SERVICE_AUTO_START, SERVICE_DEMAND_START, SERVICE_DISABLED, SERVICE_AUTO_START_DELAYED);
+  { Indexed by TDSMServiceStartup = (ssAutomatic, ssAutomaticDelayed, ssManual, ssDisabled).
+    Delayed automatic start is SERVICE_AUTO_START plus a separate flag, which is set below. }
+  NEW_START_TYPES: array [TDSMServiceStartup] of DWORD = (SERVICE_AUTO_START, SERVICE_AUTO_START,
+    SERVICE_DEMAND_START, SERVICE_DISABLED);
+var
+  LDelayedInfo: SERVICE_DELAYED_AUTO_START_INFO;
 begin
   // Check if it is not a change?
-  QueryConfig;
+  if not QueryConfig then
+    Exit;
 
   if AValue = FInfo.StartType then
     Exit;
@@ -1372,48 +1385,21 @@ begin
         Exit;
       end;
 
-      // well... we changed it, mark as such
-      if AValue = ssAutomaticDelayed then
+      // Keep the delayed flag in sync, so switching between ssAutomatic and ssAutomaticDelayed
+      // works in both directions.
+      if AValue in [ssAutomatic, ssAutomaticDelayed] then
       begin
-        FInfo.StartType := ssAutomaticDelayed;
-        SetDelayedAutoStart(True);
-      end
-      else
-        FInfo.StartType := AValue;
-    finally
-      CleanupHandle;
-    end;
-  finally
-    FServiceManager.Unlock;
-  end;
-end;
+        LDelayedInfo.fDelayedAutostart := AValue = ssAutomaticDelayed;
 
-procedure TDSMService.SetDelayedAutoStart(const AValue: Boolean);
-var
-  DelayedInfo: SERVICE_DELAYED_AUTO_START_INFO;
-begin
-  // Check if it's not changed?
-  QueryConfig;
-
-  if AValue = (FInfo.StartType = ssAutomaticDelayed) then
-    Exit;
-
-  // Alter it...
-  if FServiceManager.Lock then
-  try
-    if GetHandle(SERVICE_CHANGE_CONFIG) then
-    try
-      DelayedInfo.fDelayedAutostart := AValue;
-
-      // We locked the manager and are allowed to change the configuration...
-      if not ChangeServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, @DelayedInfo) then
-      begin
-        FServiceManager.HandleError(LAST_OS_ERROR);
-        Exit;
+        if not ChangeServiceConfig2(FServiceHandle, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, @LDelayedInfo) then
+        begin
+          FServiceManager.HandleError(LAST_OS_ERROR);
+          Exit;
+        end;
       end;
 
       // well... we changed it, mark as such
-      FInfo.StartType := ssAutomaticDelayed;
+      FInfo.StartType := AValue;
     finally
       CleanupHandle;
     end;

@@ -4,8 +4,7 @@ interface
 
 uses
   Winapi.Messages, Winapi.Windows, System.Classes, System.SysUtils, System.Variants, Vcl.Controls, Vcl.Dialogs,
-  Vcl.ExtCtrls, Vcl.Forms, Vcl.Graphics, Vcl.StdCtrls, IdBaseComponent, IdComponent, IdTCPClient, IdTCPConnection,
-  Windows.ServiceManager;
+  Vcl.ExtCtrls, Vcl.Forms, Vcl.Graphics, Vcl.StdCtrls, Windows.ServiceManager;
 
 type
   TFormFirebirdServiceMain = class(TForm)
@@ -84,7 +83,7 @@ begin
 
       Log('', 0);
       Log('Service Count: ' + Length(LServices).ToString, 1);
-   finally
+    finally
       MemoLog.Lines.EndUpdate;
     end;
   except
@@ -129,7 +128,7 @@ begin
 
       Log('', 0);
       Log('Dependent service(s) Count: ' + LDependencyCount.ToString, 1);
-   finally
+    finally
       MemoLog.Lines.EndUpdate;
     end;
   except
@@ -221,7 +220,7 @@ begin
   Log('Starting Firebird service...');
 
   try
-   ActivateOrRefreshServiceManager(True);
+    ActivateOrRefreshServiceManager(True);
 
     LFirebirdService := FServiceManager.ServiceByName(FIREBIRD_DEFAULT_SERVICE_NAME);
 

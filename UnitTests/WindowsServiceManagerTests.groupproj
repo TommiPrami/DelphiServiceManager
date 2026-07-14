@@ -1,0 +1,84 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{F0D2E7B5-4C96-4ABD-8E51-6D8FB0A4C3D7}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="TestUtils\FastService\DSMTestFastService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TestUtils\SlowService\DSMTestSlowService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TestUtils\PausableService\DSMTestPausableService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TestUtils\DependentService\DSMTestDependentService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WindowsServiceManagerUnitTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="DSMTestFastService">
+        <MSBuild Projects="TestUtils\FastService\DSMTestFastService.dproj"/>
+    </Target>
+    <Target Name="DSMTestFastService:Clean">
+        <MSBuild Projects="TestUtils\FastService\DSMTestFastService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DSMTestFastService:Make">
+        <MSBuild Projects="TestUtils\FastService\DSMTestFastService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DSMTestSlowService">
+        <MSBuild Projects="TestUtils\SlowService\DSMTestSlowService.dproj"/>
+    </Target>
+    <Target Name="DSMTestSlowService:Clean">
+        <MSBuild Projects="TestUtils\SlowService\DSMTestSlowService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DSMTestSlowService:Make">
+        <MSBuild Projects="TestUtils\SlowService\DSMTestSlowService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DSMTestPausableService">
+        <MSBuild Projects="TestUtils\PausableService\DSMTestPausableService.dproj"/>
+    </Target>
+    <Target Name="DSMTestPausableService:Clean">
+        <MSBuild Projects="TestUtils\PausableService\DSMTestPausableService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DSMTestPausableService:Make">
+        <MSBuild Projects="TestUtils\PausableService\DSMTestPausableService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DSMTestDependentService">
+        <MSBuild Projects="TestUtils\DependentService\DSMTestDependentService.dproj"/>
+    </Target>
+    <Target Name="DSMTestDependentService:Clean">
+        <MSBuild Projects="TestUtils\DependentService\DSMTestDependentService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DSMTestDependentService:Make">
+        <MSBuild Projects="TestUtils\DependentService\DSMTestDependentService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WindowsServiceManagerUnitTests">
+        <MSBuild Projects="WindowsServiceManagerUnitTests.dproj"/>
+    </Target>
+    <Target Name="WindowsServiceManagerUnitTests:Clean">
+        <MSBuild Projects="WindowsServiceManagerUnitTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WindowsServiceManagerUnitTests:Make">
+        <MSBuild Projects="WindowsServiceManagerUnitTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="DSMTestFastService;DSMTestSlowService;DSMTestPausableService;DSMTestDependentService;WindowsServiceManagerUnitTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="DSMTestFastService:Clean;DSMTestSlowService:Clean;DSMTestPausableService:Clean;DSMTestDependentService:Clean;WindowsServiceManagerUnitTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="DSMTestFastService:Make;DSMTestSlowService:Make;DSMTestPausableService:Make;DSMTestDependentService:Make;WindowsServiceManagerUnitTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

@@ -29,19 +29,12 @@ type
   end;
 
   { The states a service can be in. }
-  TDSMServiceState = (ssStopped,
-                   ssStartPending,
-                   ssStopPending,
-                   ssRunning,
-                   ssContinuePending,
-                   ssPausePending,
-                   ssPaused);
+  TDSMServiceState = (ssStopped, ssStartPending, ssStopPending, ssRunning,  ssContinuePending, ssPausePending,
+    ssPaused);
 
   { Enumeration of the standard "controls" a service can accept. The shutdown control, if not
     accepted is ignored. The shutdown control can only be sent when a shutdown occurs. }
-  TDSMServiceAccept = (saStop,
-                    saPauseContinue,
-                    saShutdown);
+  TDSMServiceAccept = (saStop, saPauseContinue, saShutdown);
 
   { The set of "controls" a service can accept. }
   TDSMServiceAccepts = set of TDSMServiceAccept;
@@ -50,10 +43,7 @@ type
     service automatically at startup. ssManual will allow applications and other services to start
     this service manually and ssDisabled will disallow the service to be started altogether (but it
     will be kept in the service database). }
-  TDSMServiceStartup = (ssAutomatic,
-                     ssAutomaticDelayed,
-                     ssManual,
-                     ssDisabled);
+  TDSMServiceStartup = (ssAutomatic, ssAutomaticDelayed, ssManual, ssDisabled);
 
 implementation
 

@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<test-results name="C:\git_opensource\TommiPrami\DelphiServiceManager\UnitTests\Win32\Debug\WindowsServiceManagerUnitTests.exe" total="47" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-07-14" time="06:26:56">
+  <culture-info current-culture="en" current-uiculture="en" />
+  <test-suite type="Assembly" name="WindowsServiceManagerUnitTests.exe" executed="true" result="Success" success="True" time="06:26:56" asserts="0">
+    <results>
+        <test-suite type="Namespace" name="DWSMUnit" executed="true" result="Success" success="True" time="27.873" asserts="0" >
+          <results>
+              <test-suite type="Namespace" name="DUnitX" executed="true" result="Success" success="True" time="27.873" asserts="0" >
+                <results>
+                    <test-suite type="Fixture" name="THelperToStringTests" executed="True" result="Success" success="True" time="0.000" >
+                      <results>
+                        <test-case name="StartupToStringCoversAllValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="StateToStringCoversAllValues" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TServiceControlTests" executed="True" result="Success" success="True" time="23.919" >
+                      <results>
+                        <test-case name="DependentsListsTheDependentService" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="DependentsReturnsEmptyArrayForTestService" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="LiveServiceReflectsOutOfBandStateChanges" executed="True" result="Success" success="True" time="0.283" asserts="0" />
+                        <test-case name="PauseAndContinuePausableService" executed="True" result="Success" success="True" time="2.045" asserts="0" />
+                        <test-case name="PauseIsRefusedWhenServiceDoesNotAcceptIt" executed="True" result="Success" success="True" time="1.025" asserts="0" />
+                        <test-case name="ServiceAcceptsReflectRunningService" executed="True" result="Success" success="True" time="1.030" asserts="0" />
+                        <test-case name="SetStateHandlesPausedTransitions" executed="True" result="Success" success="True" time="3.057" asserts="0" />
+                        <test-case name="SetStateStartsAndStopsService" executed="True" result="Success" success="True" time="2.037" asserts="0" />
+                        <test-case name="SettingTransitionalStateRaises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="StartAndStopFastService" executed="True" result="Success" success="True" time="2.021" asserts="0" />
+                        <test-case name="StartAndStopSlowService" executed="True" result="Success" success="True" time="7.090" asserts="0" />
+                        <test-case name="StartingRunningServiceRaisesOSError" executed="True" result="Success" success="True" time="1.030" asserts="0" />
+                        <test-case name="StopIsRefusedWhenServiceIsStopped" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="StopIsRefusedWhileDependentIsRunning" executed="True" result="Success" success="True" time="1.042" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TServiceManagerBasicTests" executed="True" result="Success" success="True" time="2.900" >
+                      <results>
+                        <test-case name="ActiveManagerHasServices" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="AllowLockingCannotBeChangedWhileActive" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="CloseDeactivatesAndClearsList" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ConstructorParametersAreApplied" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ErrorInfoIsAvailableWhenNotRaisingExceptions" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ErrorMessageContainsCodeAndMessageText" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="HostNameCanBeChangedWhileInactive" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="HostNameCannotBeChangedWhileActive" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="OpenAndCloseAreIdempotent" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="ParsesQuotedBinaryPathWithSpaces" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="RaiseExceptionsSettingSurvivesOpen" executed="True" result="Success" success="True" time="0.117" asserts="0" />
+                        <test-case name="RebuildServicesListRefreshesTheList" executed="True" result="Success" success="True" time="0.120" asserts="0" />
+                        <test-case name="RebuildServicesListWhileInactiveRaises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ServiceByNameFindsTestService" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ServiceByNameIsCaseInsensitive" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ServiceByNameUnknownRaises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ServiceByNameUnknownWithAllowUnknownReturnsNil" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ServiceByNameWhileInactiveRaises" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ServiceByNameWorksWithoutPrefetchedList" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="ServiceIndexMatchesListPosition" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="ServicesByDisplayNameAreSorted" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestServiceInfoIsParsed" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="WindowsServiceDescriptionIsRead" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                      </results>
+                    </test-suite>
+                    <test-suite type="Fixture" name="TServiceStartTypeTests" executed="True" result="Success" success="True" time="1.053" >
+                      <results>
+                        <test-case name="ChangingStartTypeRequiresLocking" executed="True" result="Success" success="True" time="0.117" asserts="0" />
+                        <test-case name="DelayedFlagIsClearedWhenSetBackToAutomatic" executed="True" result="Success" success="True" time="0.002" asserts="0" />
+                        <test-case name="DisabledServiceCannotBeStarted" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="SetStartTypeToAutomatic" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="SetStartTypeToAutomaticDelayed" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="SetStartTypeToDisabled" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="SetStartTypeToManual" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                        <test-case name="SettingSameStartTypeIsNoOp" executed="True" result="Success" success="True" time="0.001" asserts="0" />
+                      </results>
+                    </test-suite>
+                </results>
+              </test-suite>
+          </results>
+        </test-suite>
+    </results>
+  </test-suite>
+</test-results>
