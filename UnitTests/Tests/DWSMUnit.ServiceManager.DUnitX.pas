@@ -719,7 +719,7 @@ end;
 
 procedure TServiceControlTests.StartAndStopSlowService;
 const
-  // Generous slack: the service reports progress the whole time, so WaitFor must not time out,
+  // Generous slack: the service reports progress the whole time, so WaitFor must not timeout,
   // but returning much earlier than the operation takes would mean waiting is broken.
   MINIMUM_EXPECTED_MS = SLOW_TEST_SERVICE_OPERATION_MS - 500;
 var
