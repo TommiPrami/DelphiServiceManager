@@ -1,4 +1,4 @@
-unit DSMTestFastService.Main;
+﻿unit DSMTestFastService.Main;
 
 { Test service for the DelphiServiceManager unit tests.
 

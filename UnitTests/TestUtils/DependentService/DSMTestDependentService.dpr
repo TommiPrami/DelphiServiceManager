@@ -1,4 +1,4 @@
-program DSMTestDependentService;
+﻿program DSMTestDependentService;
 
 uses
   Vcl.SvcMgr,

@@ -1,4 +1,4 @@
-program DSMTestFastService;
+﻿program DSMTestFastService;
 
 uses
   Vcl.SvcMgr,

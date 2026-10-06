@@ -1,4 +1,4 @@
-unit DWSMUnit.TestServiceUtils;
+﻿unit DWSMUnit.TestServiceUtils;
 
 { Install/uninstall helpers for the fake services used by the DelphiServiceManager unit tests.
 

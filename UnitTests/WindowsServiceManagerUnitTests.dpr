@@ -1,4 +1,4 @@
-program WindowsServiceManagerUnitTests;
+﻿program WindowsServiceManagerUnitTests;
 
 {$IF NOT DEFINED(TESTINSIGHT)}
   {$APPTYPE CONSOLE}

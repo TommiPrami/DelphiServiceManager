@@ -1,4 +1,4 @@
-program DSMTestSlowService;
+﻿program DSMTestSlowService;
 
 uses
   Vcl.SvcMgr,

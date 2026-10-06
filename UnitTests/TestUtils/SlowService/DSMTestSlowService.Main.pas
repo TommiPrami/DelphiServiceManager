@@ -1,4 +1,4 @@
-unit DSMTestSlowService.Main;
+﻿unit DSMTestSlowService.Main;
 
 { Test service for the DelphiServiceManager unit tests.
 

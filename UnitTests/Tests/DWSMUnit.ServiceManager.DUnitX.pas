@@ -1,4 +1,4 @@
-unit DWSMUnit.ServiceManager.DUnitX;
+﻿unit DWSMUnit.ServiceManager.DUnitX;
 
 { Unit tests for Windows.ServiceManager.
 

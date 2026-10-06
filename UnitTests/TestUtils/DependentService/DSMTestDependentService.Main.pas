@@ -1,4 +1,4 @@
-unit DSMTestDependentService.Main;
+﻿unit DSMTestDependentService.Main;
 
 { Test service for the DelphiServiceManager unit tests.
 

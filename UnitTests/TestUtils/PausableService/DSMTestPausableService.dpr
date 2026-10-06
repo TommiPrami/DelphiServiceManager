@@ -1,4 +1,4 @@
-program DSMTestPausableService;
+﻿program DSMTestPausableService;
 
 uses
   Vcl.SvcMgr,
