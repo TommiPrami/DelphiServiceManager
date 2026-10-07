@@ -1,12 +1,18 @@
-<#
+﻿<#
 .SYNOPSIS
     Force source files to UTF-8 with BOM and CRLF line endings, recursively.
 
 .DESCRIPTION
     Walks Root and every subdirectory, skipping any path that contains
-    "thirdparty" or "3rdparty" (case-insensitive) and the .git folder.
+    "thirdparty" or "3rdparty" (case-insensitive), the .git folder, and every
+    folder whose name starts with "DoNotTouch".
     For each file whose extension is in -Extensions it normalises line endings
     to CRLF and re-saves the file as UTF-8 with a byte-order mark.
+
+    DoNotTouch folders hold test data whose exact bytes are the test, such as
+    Unittests\TestFiles\DoNotTouch_EolAndEncodingTestFiles, where every file
+    has a deliberately different encoding and line ending. Like .git they are
+    always skipped, whatever -ExcludePattern says.
 
     Files that are already UTF-8 + BOM + CRLF are left untouched, so the script
     is idempotent and does not create needless Git churn or mtime changes.
@@ -64,6 +70,10 @@ function Test-ByteArraysEqual([byte[]] $Left, [byte[]] $Right) {
     return $true
 }
 
+# Never touched, independent of -ExcludePattern: the .git folder, and any
+# folder named DoNotTouch* - test data whose exact bytes are the test.
+$protectedPathPattern = '(?i)[\\/](\.git|DoNotTouch[^\\/]*)[\\/]'
+
 $convertedCount = 0
 $compliantCount = 0
 $skippedCount   = 0
@@ -73,7 +83,7 @@ Get-ChildItem -LiteralPath $Root -Recurse -File |
     ForEach-Object {
         $fullPath = $_.FullName
 
-        if (($fullPath -match $ExcludePattern) -or ($fullPath -match '(?i)[\\/]\.git[\\/]')) {
+        if (($fullPath -match $ExcludePattern) -or ($fullPath -match $protectedPathPattern)) {
             $skippedCount++
             Write-Verbose "Skipped (excluded): $fullPath"
             return
@@ -105,5 +115,5 @@ Get-ChildItem -LiteralPath $Root -Recurse -File |
     }
 
 Write-Host ''
-Write-Host ("Converted: {0}   Already compliant: {1}   Skipped (third-party/.git): {2}" -f `
+Write-Host ("Converted: {0}   Already compliant: {1}   Skipped (third-party/.git/DoNotTouch): {2}" -f `
     $convertedCount, $compliantCount, $skippedCount)
